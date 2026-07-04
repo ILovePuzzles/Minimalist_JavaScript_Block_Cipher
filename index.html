@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minimalist JavaScript Polyalphabetic Cipher</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="script.js" defer></script>
+</head>
+<body>
+
+    <div class="container flexContainer">
+        <h2>MINIMALIST SUBSTITUTION AND TRANSPOSITION CIPHER</h2>
+
+        <br>
+        <br>
+
+        <div id="instructions">
+            <p>***** INSTRUCTIONS *****</p>
+
+            <br>
+
+            <p>The library cannot contain the same character more than once;<br>
+                The library must contain at least 2 characters, up to a maximum of 256 characters;<br>
+                The input message and the two keys can only contain characters from the library;<br>
+                The input message and the two keys must not be longer than the library;<br>
+                If your message and the keys are not the same length as the library, then additionnal characters will be added at the end;<br>
+                If you choose to complete your keys using pseudorandom characters, then you may leave the input blank, or choose a seed from 0 to 256.</p>
+
+            <br>
+        </div>
+
+        <div>
+            <button id="instrubtn" type="button">Show/hide instructions</button>    
+        </div>
+
+        <br>
+
+        <label>Input message</label>
+        <input id="input" class="field" type="text">
+        <p id="inputP"></p>
+
+        <br>
+
+        <label>Library</label>
+        <input id="library" type="text">
+        <p id="libraryP"></p>
+
+        <br>
+
+        <label>Substitution key</label>
+        <input id="keySub" class="field" type="text">
+        <p id="keySubP"></p>
+
+        <br>
+
+        <label>Transposition key</label>
+        <input id="keyTra" class="field" type="text">
+        <p id="keyTraP"></p>
+
+        <br>
+
+        <div class="divKeysNButtons">
+            <fieldset>
+
+                <div>
+                    <legend>Choose a mode to complete the keys, if the keys are shorter than the message:</legend>
+                </div>
+                
+                <div class="divModeKeys">
+                    <div class="divMode1">
+                        <div>
+                            <label for="pseudorandom">Mode 1, add pseudorandom characters</label>
+                            <input type="radio" id="pseudorandom" name="completeFields" checked>
+                        </div>
+
+                        <div class="divSeed">
+                            <input id="seed" class="field" type="number" placeholder="Select seed value: 0-256" min="0" max="256">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="repeat">Mode 2, repeat existing pattern</label>
+                        <input type="radio" id="repeat" name="completeFields">
+                    </div>
+                </div>
+
+            </fieldset>
+        </div>
+
+        <br>
+
+        <div class="divKeysNButtons">
+            <div class="flexButtons">
+                <button id="encode" type="button">Encode</button>
+                <button id="decode" type="button">Decode</button>
+            </div>
+        </div>
+
+        <br>
+
+        <label for="output">Output message</label>
+        <input id="output" class="field" type="text" readonly>
+
+        <br>
+        
+        <div>
+            <button id="reset" type="button">Reset fields</button>
+        </div>
+    </div>
+    
+</body>
+</html>

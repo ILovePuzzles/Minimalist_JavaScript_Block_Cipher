@@ -1,0 +1,95 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: Arial;
+}
+
+body {
+    text-align: center;
+}
+
+input, p {
+    margin: 0 auto;
+}
+
+input {
+    text-align: center;
+    width: 30ch;
+    max-width: 100vw;
+    font-size: inherit;
+}
+
+input[type="radio"] {
+    width: 5ch;
+}
+
+button {
+    padding: 0 2ch;
+    font-size: inherit;
+}
+
+fieldset {
+    border-style: none;
+}
+
+.container {
+    margin: 4ch 0 4ch;
+    width: 100vw;
+}
+
+.flexContainer {
+    display: flex;
+    flex-wrap: wrap;
+    flex-direction: column;
+    justify-content: center;
+    align-content: center;
+}
+
+.divKeysNButtons {
+    display: flex;
+    flex-wrap: wrap;
+    flex-direction: column;
+    justify-content: center;
+    align-content: center;
+}
+
+.divKeysNButtons legend, .divKeysNButtons label {
+    padding: 1ch 0;
+}
+
+.divModeKeys {
+    display: flex;
+    flex-wrap: wrap;
+    flex-direction: row;
+    justify-content: space-between;
+    align-content: space-around;
+    width: 75ch;
+}
+
+.divMode1 {
+    display: flex;
+    flex-wrap: wrap;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.divSeed {
+    padding: 1ch;
+}
+
+.flexButtons {
+    display: flex;
+    flex-wrap: wrap;
+    flex-direction: row;
+    justify-content: space-between;
+    width: 30ch;
+}
+
+.hidden {
+    display: none;
+}
+
+#instrubtn {
+    width: 20ch;
+}
