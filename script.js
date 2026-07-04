@@ -27,8 +27,17 @@ document.getElementById("decode").onclick = function() { convert(false) }
 
 // Method that updates the element width provided as an argument, in "ch" units
 function updateCSS(element) {
-    if (element.value.length > 20) { element.style.width = (element.value.length + 10) + "ch" }
-    else { element.style.width = 30 + "ch" }
+    if (element.id != "input" && element.id != "output") {
+        if (element.value.length > 20) { element.style.width = (element.value.length + 10) + "ch" }
+        else { element.style.width = 30 + "ch" }
+    }
+
+    else {
+        if (element.value.length >= 60) { element.style.width = 70 + "ch"}
+        else if (element.value.length > 20 && element.value.length < 60) { element.style.width = (element.value.length + 10) + "ch" }
+        else { element.style.width = 30 + "ch" }
+    }
+
 }
 
 // Method that updates the HTML
@@ -72,18 +81,22 @@ function convert(encode) {
 
         if (document.getElementById("input").value.length == 0) { throw new Error("invalid input message. "+
             "The input message cannot be empty.") }
+        if (document.getElementById("keySub").value.length > library.length) { throw new Error("invalid substitution key. "+
+            "The substitution key cannot be longer than the library.") }
+        if (document.getElementById("keyTra").value.length > library.length) { throw new Error("invalid transposition key. "+
+            "The transposition key cannot be longer than the library.") }
 
         const input = validate(document.getElementById("input"), library, true).toString()
-        if (input === "") { throw new Error("invalid input message. The input message cannot be longer " +
-            "than the library. It must only contain characters from the library.") }
+        if (input === "") { throw new Error("invalid input message. The input message must contain characters " +
+            "from the library only. Also, the input message cannot be larger than the library length squared.") }
 
         const keySub = validate(document.getElementById("keySub"), library, false, seed).toString()
         if (keySub === "") { throw new Error("invalid substitution key. The substitution key cannot be empty, " +
-            "and cannot be longer than the library. It must only contain characters from the library.") }
+            "and cannot be longer than the library. It must contain characters from the library only.") }
 
         const keyTra = validate(document.getElementById("keyTra"), library, false, seed).toString()
         if (keyTra === "") { throw new Error("invalid transposition key. The transposition key cannot be empty, " +
-            "and cannot be longer than the library. It must only contain characters from the library.") }
+            "and cannot be longer than the library. It must contain characters from the library only.") }
 
         // If no error has been thrown, encode or decode the message using the keys
         // Once the message has been converted, show the output value
@@ -126,93 +139,119 @@ function validate(element, library, msgBool, seed) {
     const valueLength = value.length
     const libraryLength = library.length
 
-    if (valueLength <= library.length) {
-        let isValid = true
+    let isValid = true
 
-        // If the value contains a character that is not in the library, then the value is not valid
-        for (let i = 0; i < valueLength; i++) {
-            isValid = library.includes(value[i])
+    // If the value contains a character that is not in the library, then the value is not valid
+    for (let i = 0; i < valueLength; i++) {
+        isValid = library.includes(value[i])
 
-            if (!isValid) { break }
+        if (!isValid) { break }
+    }
+
+    // If the element value is valid and its length is too short
+    if (isValid && valueLength <= libraryLength) {
+        // If the element is one of the keys
+        if (!msgBool) {
+            // If the element id="repeat" is checked, repeat the existing pattern
+            if (!document.getElementById("pseudorandom").checked && valueLength != 0) {
+                for (let i = valueLength; i < libraryLength; i++) {
+                value += value[i % valueLength].toString()
+                }
+            }
+
+            // If the element id="pseudorandom" is checked instead, then add pseudorandom characters to the message
+            else if (document.getElementById("pseudorandom").checked) {
+                const list = inversiveCongruentialGenerator(libraryLength - valueLength, libraryLength, seed);
+                let count = 0;
+
+                for (let i = valueLength; i < libraryLength; i++) {
+                    value += library[list[count++]].toString()
+                }
+            }
         }
 
-        // If the element value is valid and its length is too short
-        if (isValid && valueLength <= libraryLength) {
-            // If the element is one of the keys
-            if (!msgBool) {
-                // If the element id="repeat" is checked, repeat the existing pattern
-                if (!document.getElementById("pseudorandom").checked && valueLength != 0) {
-                    for (let i = valueLength; i < library.length; i++) {
-                    value += value[i % valueLength].toString()
-                    }
-                }
+        // If the element is the message
+        else {
+            const list = inversiveCongruentialGenerator(1, libraryLength, -1);
 
-                // If the element id="pseudorandom" is checked instead, then add pseudorandom characters to the message
-                else if (document.getElementById("pseudorandom").checked) {
-                    const list = inversiveCongruentialGenerator(library.length - valueLength, libraryLength, seed);
-                    let count = 0;
-
-                    for (let i = valueLength; i < library.length; i++) {
-                        value += library[list[count++]].toString()
-                    }
-                }
+            for (let i = valueLength; i < libraryLength; i++) {
+                value += library[list[0]].toString()
             }
-
-            // If the element is the message
-            else {
-                const list = inversiveCongruentialGenerator(1, libraryLength, -1);
-
-                for (let i = valueLength; i < library.length; i++) {
-                    value += library[list[0]].toString()
-                }
-            }
+        }
             
+        element.value = value.toString()
+        updateCSS(element)
+        updateHTML(element)
+    }
+
+    else if (isValid && msgBool) {
+        if (valueLength > libraryLength * libraryLength) {
+            isValid = false;
+        }
+
+        else if (valueLength % libraryLength != 0) {
+            const list = inversiveCongruentialGenerator(1, libraryLength, -1);
+
+            for (let i = valueLength; i < valueLength + libraryLength - valueLength % libraryLength; i++) {
+                value += library[list[0]].toString()
+            }
+
             element.value = value.toString()
             updateCSS(element)
             updateHTML(element)
         }
-
-        return (isValid ? value : "")
     }
 
-    return ""
+    return (isValid ? value : "")
 }
 
 // Method that substitutes and transposes the characters and returns a string
 function crypt(encode, input, library, keySub, keyTra) {
     const msgLength = input.length
     const libraryLength = library.length
-    let message = Array.from(input.toString())
+    let message = ""
+    // The counter servers two purposes :
+    // 1. It helps to split the message into smaller substrings;
+    // 2. It helps to shift the library, in order to reuse the keys differently.
+    let counter = -1
+    let partialMsg = ""
 
     const sign = (encode ? 1 : -1)
-    const start = (encode ? 0 : msgLength - 1)
-    const end = (encode ? msgLength : -1)
+    const start = (encode ? 0 : libraryLength - 1)
+    const end = (encode ? libraryLength : -1)
     const step = (encode ? 1 : -1)
 
-    for (let initPos = start; initPos != end; initPos += step) {
-        // Find transposition displacement value using key
-        let transposition = library.indexOf(keyTra[initPos].toString())
-        // Compute (initial position + displacement) mod libraryLength
-        let finalPos = (initPos + transposition) % libraryLength;
+    while (++counter * libraryLength < msgLength) {
+        // Split the input message into substrings of the length of the library
+        partialMsg = Array.from(input.toString().substring(counter * libraryLength, (counter + 1) * libraryLength))
 
-        let initSymb1 = library.indexOf(message[initPos].toString())
-        // Find substitution displacement value 1 using key
-        let substitution1 = (encode ? library.indexOf(keySub[initPos].toString()) : library.indexOf(keySub[finalPos].toString()))
-        // Compute (initial symbol 1 + displacement) mod libraryLength
-        let finalSymb1 = (initSymb1 + sign * substitution1 + libraryLength) % libraryLength
+        for (let initPos = start; initPos != end; initPos += step) {
+            // Find transposition displacement value using key
+            let transposition = library.indexOf(keyTra[initPos].toString())
+            // Compute (initial position + displacement + counter) mod libraryLength
+            let finalPos = (initPos + transposition + counter) % libraryLength;
 
-        let initSymb2 = library.indexOf(message[finalPos].toString())
-        // Find substitution displacement value 2 using key
-        let substitution2 = (encode ? library.indexOf(keySub[finalPos].toString()) : library.indexOf(keySub[initPos].toString()))
-        // Compute (initial symbol 2 + displacement) mod libraryLength
-        let finalSymb2 = (initSymb2 + sign * substitution2 + libraryLength) % libraryLength
+            let initSymb1 = library.indexOf(partialMsg[initPos].toString())
+            // Find substitution displacement value 1 using key
+            let substitution1 = (encode ? library.indexOf(keySub[initPos].toString()) : library.indexOf(keySub[finalPos].toString()))
+            // Compute (initial symbol 1 + displacement + counter) mod libraryLength
+            let finalSymb1 = (initSymb1 + sign * (substitution1 + counter) + libraryLength) % libraryLength
 
-        // Change symbol values and swap values
-        message[initPos] = library[finalSymb2].toString()
-        message[finalPos] = library[finalSymb1].toString()
+            let initSymb2 = library.indexOf(partialMsg[finalPos].toString())
+            // Find substitution displacement value 2 using key
+            let substitution2 = (encode ? library.indexOf(keySub[finalPos].toString()) : library.indexOf(keySub[initPos].toString()))
+            // Compute (initial symbol 2 + displacement + counter) mod libraryLength
+            let finalSymb2 = (initSymb2 + sign * (substitution2 + counter) + libraryLength) % libraryLength
+
+            // Change symbol values and swap values
+            partialMsg[initPos] = library[finalSymb2].toString()
+            partialMsg[finalPos] = library[finalSymb1].toString()
+        }
+
+        message += partialMsg.join("")
     }
 
-    return message.join("")
+    return message
 }
 
 // Method that generates a pseudorandom number list (PRNG)
