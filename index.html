@@ -23,11 +23,12 @@
             <p>The library cannot contain the same character more than once;<br>
                 The library must contain at least 2 characters, up to a maximum of 256 characters;<br>
                 The input message and the two keys can only contain characters from the library;<br>
-                The two keys must not be longer than the library, however the input message may be longer;<br>
-                If your message and the keys are not the same length as the library, then additionnal characters will be added at the end;<br>
+                The two keys must not be longer than the input message;<br>
+                If your message and the keys are not a multiple of the length of the library, then additionnal characters will be added at the end;<br>
                 If you choose to complete your keys using pseudorandom characters, then you may leave the input blank, or choose a seed from 0 to 256.</p>
-            <br>
         </div>
+
+        <br>
 
         <div>
             <button id="instrubtn" type="button">Show/hide instructions</button>    
