@@ -27,15 +27,19 @@ document.getElementById("decode").onclick = function() { convert(false) }
 
 // Method that updates the element width provided as an argument, in "ch" units
 function updateCSS(element) {
-    if (element.id != "input" && element.id != "output") {
-        if (element.value.length > 20) { element.style.width = (element.value.length + 10) + "ch" }
-        else { element.style.width = 30 + "ch" }
-    }
+    let elementLength = element.value.length
 
+    if (elementLength >= 60) {
+        element.style.width = 70 + "ch"
+        element.style.height = (Math.ceil(elementLength / 60) * 2 + 4) + "ch"
+    }
+    else if (elementLength > 20 && elementLength < 60) {
+        element.style.width = (elementLength + 10) + "ch"
+        element.style.height = 4 + "ch"
+    }
     else {
-        if (element.value.length >= 60) { element.style.width = 70 + "ch"}
-        else if (element.value.length > 20 && element.value.length < 60) { element.style.width = (element.value.length + 10) + "ch" }
-        else { element.style.width = 30 + "ch" }
+        element.style.width = 30 + "ch"
+        element.style.height = 4 + "ch"
     }
 
 }
@@ -79,24 +83,23 @@ function convert(encode) {
          // If seed is undefined, set the value to -1, in order to automatically generate a seed later
         if (seed == "") { seed = -1 }
 
-        if (document.getElementById("input").value.length == 0) { throw new Error("invalid input message. "+
-            "The input message cannot be empty.") }
-        if (document.getElementById("keySub").value.length > library.length) { throw new Error("invalid substitution key. "+
-            "The substitution key cannot be longer than the library.") }
-        if (document.getElementById("keyTra").value.length > library.length) { throw new Error("invalid transposition key. "+
-            "The transposition key cannot be longer than the library.") }
+        let msgLength = document.getElementById("input").value.length
 
-        const input = validate(document.getElementById("input"), library, true).toString()
+        if (msgLength == 0) { throw new Error("invalid input message. The input message cannot be empty.") }
+
+        const input = validate(document.getElementById("input"), library, true, msgLength).toString()
         if (input === "") { throw new Error("invalid input message. The input message must contain characters " +
             "from the library only. Also, the input message cannot be larger than the library length squared.") }
 
-        const keySub = validate(document.getElementById("keySub"), library, false, seed).toString()
-        if (keySub === "") { throw new Error("invalid substitution key. The substitution key cannot be empty, " +
-            "and cannot be longer than the library. It must contain characters from the library only.") }
+        msgLength = input.length
 
-        const keyTra = validate(document.getElementById("keyTra"), library, false, seed).toString()
-        if (keyTra === "") { throw new Error("invalid transposition key. The transposition key cannot be empty, " +
-            "and cannot be longer than the library. It must contain characters from the library only.") }
+        const keySub = validate(document.getElementById("keySub"), library, false, msgLength, seed).toString()
+        if (keySub === "") { throw new Error("invalid substitution key. The substitution key cannot be empty, and it "
+            + "cannot be longer than the message. It must contain characters from the library only.") }
+
+        const keyTra = validate(document.getElementById("keyTra"), library, false, msgLength, seed).toString()
+        if (keyTra === "") { throw new Error("invalid transposition key. The transposition key cannot be empty, and it "
+            + "cannot be longer than the message. It must contain characters from the library only.") }
 
         // If no error has been thrown, encode or decode the message using the keys
         // Once the message has been converted, show the output value
@@ -134,7 +137,7 @@ function setLibrary(library) {
 
 // Method that validates the input and the 2 keys, and returns either a validated string or an empty string
 // If the string is too short, the method expands the string
-function validate(element, library, msgBool, seed) {
+function validate(element, library, msgBool, msgLength, seed) {
     value = element.value
     const valueLength = value.length
     const libraryLength = library.length
@@ -149,34 +152,31 @@ function validate(element, library, msgBool, seed) {
     }
 
     // If the element value is valid and its length is too short
-    if (isValid && valueLength <= libraryLength) {
+    if (isValid && !msgBool) {
         // If the element is one of the keys
-        if (!msgBool) {
+        if (valueLength < libraryLength || valueLength == 0 || valueLength % libraryLength != 0) {
             // If the element id="repeat" is checked, repeat the existing pattern
-            if (!document.getElementById("pseudorandom").checked && valueLength != 0) {
-                for (let i = valueLength; i < libraryLength; i++) {
+            if (!document.getElementById("pseudorandom").checked && valueLength != 0) {à
+                if (valueLength == 0) { return "" }
+
+                for (let i = valueLength; i < msgLength; i++) {
                 value += value[i % valueLength].toString()
                 }
             }
 
             // If the element id="pseudorandom" is checked instead, then add pseudorandom characters to the message
             else if (document.getElementById("pseudorandom").checked) {
-                const list = inversiveCongruentialGenerator(libraryLength - valueLength, libraryLength, seed);
+                const list = inversiveCongruentialGenerator(msgLength - valueLength, libraryLength, seed);
                 let count = 0;
 
-                for (let i = valueLength; i < libraryLength; i++) {
+                for (let i = valueLength; i < msgLength; i++) {
                     value += library[list[count++]].toString()
                 }
             }
         }
 
-        // If the element is the message
-        else {
-            const list = inversiveCongruentialGenerator(1, libraryLength, -1);
-
-            for (let i = valueLength; i < libraryLength; i++) {
-                value += library[list[0]].toString()
-            }
+        else if (valueLength > msgLength) {
+            return ""
         }
             
         element.value = value.toString()
@@ -185,21 +185,23 @@ function validate(element, library, msgBool, seed) {
     }
 
     else if (isValid && msgBool) {
-        if (valueLength > libraryLength * libraryLength) {
-            isValid = false;
-        }
-
-        else if (valueLength % libraryLength != 0) {
+        if (valueLength < libraryLength || valueLength % libraryLength != 0) {
             const list = inversiveCongruentialGenerator(1, libraryLength, -1);
 
             for (let i = valueLength; i < valueLength + libraryLength - valueLength % libraryLength; i++) {
                 value += library[list[0]].toString()
             }
 
-            element.value = value.toString()
-            updateCSS(element)
-            updateHTML(element)
+
         }
+
+        else if (valueLength > libraryLength * libraryLength) {
+            return ""
+        }
+
+        element.value = value.toString()
+        updateCSS(element)
+        updateHTML(element)
     }
 
     return (isValid ? value : "")
