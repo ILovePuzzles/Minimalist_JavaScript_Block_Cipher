@@ -67,6 +67,7 @@ function convert(encode) {
         let seed = document.getElementById("seed").value
 
         if (seed < 0 || seed > 256) { throw new Error("invalid seed value. The seed values range from 0 to 256.") }
+         // If seed is undefined, set the value to -1, in order to automatically generate a seed later
         if (seed == "") { seed = -1 }
 
         if (document.getElementById("input").value.length == 0) { throw new Error("invalid input message. "+
@@ -135,7 +136,9 @@ function validate(element, library, msgBool, seed) {
             if (!isValid) { break }
         }
 
+        // If the element value is valid and its length is too short
         if (isValid && valueLength <= libraryLength) {
+            // If the element is one of the keys
             if (!msgBool) {
                 // If the element id="repeat" is checked, repeat the existing pattern
                 if (!document.getElementById("pseudorandom").checked && valueLength != 0) {
@@ -155,6 +158,7 @@ function validate(element, library, msgBool, seed) {
                 }
             }
 
+            // If the element is the message
             else {
                 const list = inversiveCongruentialGenerator(1, libraryLength, -1);
 
@@ -186,17 +190,24 @@ function crypt(encode, input, library, keySub, keyTra) {
     const step = (encode ? 1 : -1)
 
     for (let initPos = start; initPos != end; initPos += step) {
+        // Find transposition displacement value using key
         let transposition = library.indexOf(keyTra[initPos].toString())
+        // Compute (initial position + displacement) mod libraryLength
         let finalPos = (initPos + transposition) % libraryLength;
 
         let initSymb1 = library.indexOf(message[initPos].toString())
+        // Find substitution displacement value 1 using key
         let substitution1 = (encode ? library.indexOf(keySub[initPos].toString()) : library.indexOf(keySub[finalPos].toString()))
+        // Compute (initial symbol 1 + displacement) mod libraryLength
         let finalSymb1 = (initSymb1 + sign * substitution1 + libraryLength) % libraryLength
 
         let initSymb2 = library.indexOf(message[finalPos].toString())
+        // Find substitution displacement value 2 using key
         let substitution2 = (encode ? library.indexOf(keySub[finalPos].toString()) : library.indexOf(keySub[initPos].toString()))
+        // Compute (initial symbol 2 + displacement) mod libraryLength
         let finalSymb2 = (initSymb2 + sign * substitution2 + libraryLength) % libraryLength
 
+        // Change symbol values and swap values
         message[initPos] = library[finalSymb2].toString()
         message[finalPos] = library[finalSymb1].toString()
     }
@@ -206,11 +217,13 @@ function crypt(encode, input, library, keySub, keyTra) {
 
 // Method that generates a pseudorandom number list (PRNG)
 function inversiveCongruentialGenerator(valueCount, libraryLength, seed) {
+    // If the seed was undefined, generate a pseudorandom seed
     if (seed = -1) { seed = Math.floor(Math.random() * 256) + 1 }
     const valueList = []
 
     for (let i = 0; i < valueCount; i++) {
-        seed == 0 ? seed = 250 : seed = (105 * invertAByte(seed) + 250) % 257 // Based on the primitive polynomial (x^2 - 250x - 105) % 257
+        // Inversive congruential generator based on the primitive polynomial (x^2 - 250x - 105) over GF[257]
+        seed == 0 ? seed = 250 : seed = (105 * invertAByte(seed) + 250) % 257
 
         valueList.push(seed % libraryLength)
     }
@@ -219,7 +232,7 @@ function inversiveCongruentialGenerator(valueCount, libraryLength, seed) {
 
 
 
-    // Modular multiplicative inversion based on Fermat's Little theorem
+    // Modular multiplicative inversion based on Fermat's Little theorem (branchless code)
     function invertAByte(a) {
         let b = a
 
