@@ -154,7 +154,7 @@ function validate(element, library, msgBool, msgLength, seed) {
     // If the element value is valid and its length is too short
     if (isValid && !msgBool) {
         // If the element is one of the keys
-        if (valueLength < libraryLength || valueLength == 0 || valueLength % libraryLength != 0) {
+        if (valueLength < libraryLength || valueLength % libraryLength != 0 || valueLength == 0) {
             // If the element id="repeat" is checked, repeat the existing pattern
             if (!document.getElementById("pseudorandom").checked && valueLength != 0) {à
                 if (valueLength == 0) { return "" }
@@ -221,13 +221,12 @@ function crypt(encode, input, library, keySub, keyTra) {
     const sign = (encode ? 1 : -1)
     const start = (encode ? 0 : libraryLength - 1)
     const end = (encode ? libraryLength : -1)
-    const step = (encode ? 1 : -1)
 
     while (++counter * libraryLength < msgLength) {
         // Split the input message into substrings of the length of the library
         partialMsg = Array.from(input.toString().substring(counter * libraryLength, (counter + 1) * libraryLength))
 
-        for (let initPos = start; initPos != end; initPos += step) {
+        for (let initPos = start; initPos != end; initPos += sign) {
             // Find transposition displacement value using key
             let transposition = library.indexOf(keyTra[initPos].toString())
             // Compute (initial position + displacement + counter) mod libraryLength
@@ -237,13 +236,13 @@ function crypt(encode, input, library, keySub, keyTra) {
             // Find substitution displacement value 1 using key
             let substitution1 = (encode ? library.indexOf(keySub[initPos].toString()) : library.indexOf(keySub[finalPos].toString()))
             // Compute (initial symbol 1 + displacement + counter) mod libraryLength
-            let finalSymb1 = (initSymb1 + sign * (substitution1 + counter) + libraryLength) % libraryLength
+            let finalSymb1 = (initSymb1 + sign * (substitution1 + counter) + 2 * libraryLength) % libraryLength
 
             let initSymb2 = library.indexOf(partialMsg[finalPos].toString())
             // Find substitution displacement value 2 using key
             let substitution2 = (encode ? library.indexOf(keySub[finalPos].toString()) : library.indexOf(keySub[initPos].toString()))
             // Compute (initial symbol 2 + displacement + counter) mod libraryLength
-            let finalSymb2 = (initSymb2 + sign * (substitution2 + counter) + libraryLength) % libraryLength
+            let finalSymb2 = (initSymb2 + sign * (substitution2 + counter) + 2 * libraryLength) % libraryLength
 
             // Change symbol values and swap values
             partialMsg[initPos] = library[finalSymb2].toString()
