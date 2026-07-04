@@ -33,6 +33,10 @@ fieldset {
     border-style: none;
 }
 
+textarea {
+    text-align: center;
+}
+
 .container {
     margin: 4ch 0 4ch;
     width: 100vw;
