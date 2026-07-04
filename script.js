@@ -103,7 +103,9 @@ function convert(encode) {
 
         // If no error has been thrown, encode or decode the message using the keys
         // Once the message has been converted, show the output value
-        const output = crypt(encode, input, library, keySub, keyTra)
+        let output = ""
+        encode ? output = transpose(encode, input, library, keyTra) : output = substitute(encode, input, library, keySub)
+        encode ? output = substitute(encode, output, library, keySub) : output = transpose(encode, output, library, keyTra)
 
         elementOutput.value = output.toString()
         updateCSS(elementOutput)
@@ -148,13 +150,13 @@ function validate(element, library, msgBool, msgLength, seed) {
     for (let i = 0; i < valueLength; i++) {
         isValid = library.includes(value[i])
 
-        if (!isValid) { break }
+        if (!isValid) { return "" }
     }
 
-    // If the element value is valid and its length is too short
-    if (isValid && !msgBool) {
+    // If the key is valid
+    if (!msgBool) {
         // If the element is one of the keys
-        if (valueLength < libraryLength || valueLength % libraryLength != 0 || valueLength == 0) {
+        if (valueLength != msgLength) {
             // If the element id="repeat" is checked, repeat the existing pattern
             if (!document.getElementById("pseudorandom").checked && valueLength != 0) {à
                 if (valueLength == 0) { return "" }
@@ -175,6 +177,7 @@ function validate(element, library, msgBool, msgLength, seed) {
             }
         }
 
+        // If the key is longer than the message
         else if (valueLength > msgLength) {
             return ""
         }
@@ -184,19 +187,24 @@ function validate(element, library, msgBool, msgLength, seed) {
         updateHTML(element)
     }
 
-    else if (isValid && msgBool) {
-        if (valueLength < libraryLength || valueLength % libraryLength != 0) {
+    // If the message is valid
+    else if (msgBool) {
+        // If the message is larger than the square of the library length
+        if (valueLength > libraryLength * libraryLength) {
+            return ""
+        }
+
+        // If the message is equal to the library length or a multiple of it
+        else if (valueLength % libraryLength == 0 && valueLength >= libraryLength) {
+            return value
+        }
+
+        else {
             const list = inversiveCongruentialGenerator(1, libraryLength, -1);
 
             for (let i = valueLength; i < valueLength + libraryLength - valueLength % libraryLength; i++) {
                 value += library[list[0]].toString()
             }
-
-
-        }
-
-        else if (valueLength > libraryLength * libraryLength) {
-            return ""
         }
 
         element.value = value.toString()
@@ -207,8 +215,8 @@ function validate(element, library, msgBool, msgLength, seed) {
     return (isValid ? value : "")
 }
 
-// Method that substitutes and transposes the characters and returns a string
-function crypt(encode, input, library, keySub, keyTra) {
+// Method that substitutes the characters and returns a string
+function substitute(encode, input, library, keySub) {
     const msgLength = input.length
     const libraryLength = library.length
     let message = ""
@@ -216,37 +224,66 @@ function crypt(encode, input, library, keySub, keyTra) {
     // 1. It helps to split the message into smaller substrings;
     // 2. It helps to shift the library, in order to reuse the keys differently.
     let counter = -1
-    let partialMsg = ""
+    let partialMsg
+    let partialKey
+    let initPos = 0
+    let substitution = 0
+    let finalPos = 0
 
     const sign = (encode ? 1 : -1)
-    const start = (encode ? 0 : libraryLength - 1)
-    const end = (encode ? libraryLength : -1)
 
     while (++counter * libraryLength < msgLength) {
         // Split the input message into substrings of the length of the library
         partialMsg = Array.from(input.toString().substring(counter * libraryLength, (counter + 1) * libraryLength))
+        partialKey = Array.from(keySub.toString().substring(counter * libraryLength, (counter + 1) * libraryLength))
 
-        for (let initPos = start; initPos != end; initPos += sign) {
+        for (let i = 0; i < libraryLength; i++) {
+            // Find actual symbol index value
+            initSymb = library.indexOf(partialMsg[i].toString())
             // Find transposition displacement value using key
-            let transposition = library.indexOf(keyTra[initPos].toString())
+            substitution = library.indexOf(partialKey[i].toString())
             // Compute (initial position + displacement + counter) mod libraryLength
-            let finalPos = (initPos + transposition + counter) % libraryLength;
+            finalSymb = (initSymb + sign * (substitution + counter) + 2 * libraryLength) % libraryLength
 
-            let initSymb1 = library.indexOf(partialMsg[initPos].toString())
-            // Find substitution displacement value 1 using key
-            let substitution1 = (encode ? library.indexOf(keySub[initPos].toString()) : library.indexOf(keySub[finalPos].toString()))
-            // Compute (initial symbol 1 + displacement + counter) mod libraryLength
-            let finalSymb1 = (initSymb1 + sign * (substitution1 + counter) + 2 * libraryLength) % libraryLength
+            partialMsg[i] = library[finalSymb].toString()
+        }
 
-            let initSymb2 = library.indexOf(partialMsg[finalPos].toString())
-            // Find substitution displacement value 2 using key
-            let substitution2 = (encode ? library.indexOf(keySub[finalPos].toString()) : library.indexOf(keySub[initPos].toString()))
-            // Compute (initial symbol 2 + displacement + counter) mod libraryLength
-            let finalSymb2 = (initSymb2 + sign * (substitution2 + counter) + 2 * libraryLength) % libraryLength
+        message += partialMsg.join("")
+    }
 
-            // Change symbol values and swap values
-            partialMsg[initPos] = library[finalSymb2].toString()
-            partialMsg[finalPos] = library[finalSymb1].toString()
+    return message
+}
+
+// Method that transposes the characters and returns a string
+function transpose(encode, input, library, keyTra) {
+    const msgLength = input.length
+    const libraryLength = library.length
+    let message = ""
+    // The counter servers two purposes :
+    // 1. It helps to split the message into smaller substrings;
+    // 2. It helps to shift the library, in order to reuse the keys differently.
+    let counter = -1
+    let partialMsg
+    let partialKey
+    let transposition = 0
+    let finalPos = 0
+
+    const start = (encode ? 0 : libraryLength - 1)
+    const end = (encode ? libraryLength : -1)
+    const step = (encode ? 1 : -1)
+
+    while (++counter * libraryLength < msgLength) {
+        // Split the input message into substrings of the length of the library
+        partialMsg = Array.from(input.toString().substring(counter * libraryLength, (counter + 1) * libraryLength))
+        partialKey = Array.from(keyTra.toString().substring(counter * libraryLength, (counter + 1) * libraryLength))
+
+        for (let initPos = start; initPos != end; initPos += step) {
+            // Find transposition displacement value using key
+            transposition = library.indexOf(partialKey[initPos].toString())
+            // Compute (initial position + displacement + counter) mod libraryLength
+            finalPos = (initPos + transposition + counter) % libraryLength;
+
+            [partialMsg[initPos], partialMsg[finalPos]] = [partialMsg[finalPos], partialMsg[initPos]]
         }
 
         message += partialMsg.join("")
