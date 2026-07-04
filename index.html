@@ -23,10 +23,9 @@
             <p>The library cannot contain the same character more than once;<br>
                 The library must contain at least 2 characters, up to a maximum of 256 characters;<br>
                 The input message and the two keys can only contain characters from the library;<br>
-                The input message and the two keys must not be longer than the library;<br>
+                The two keys must not be longer than the library, however the input message may be longer;<br>
                 If your message and the keys are not the same length as the library, then additionnal characters will be added at the end;<br>
                 If you choose to complete your keys using pseudorandom characters, then you may leave the input blank, or choose a seed from 0 to 256.</p>
-
             <br>
         </div>
 
@@ -37,8 +36,11 @@
         <br>
 
         <label>Input message</label>
-        <input id="input" class="field" type="text">
-        <p id="inputP"></p>
+        <div>
+            <textarea id="input" class="field"></textarea>
+            <p id="inputP"></p>
+        </div>
+
 
         <br>
 
@@ -100,7 +102,9 @@
         <br>
 
         <label for="output">Output message</label>
-        <input id="output" class="field" type="text" readonly>
+        <div>
+            <textarea id="output" class="field" readonly></textarea>
+        </div>
 
         <br>
         
