@@ -96,13 +96,24 @@ function convert(encode) {
             result: ""
         }
 
+        const elementInput = document.getElementById("input")
+        const elementKeySub = document.getElementById("keySub")
+        const elementKeyTra = document.getElementById("keyTra")
+
         // Validate then set the values for the object infos
         const infosLibrary = setLibrary(elementLibrary.value, infosEmpty)
-        const infosMsg = validate(document.getElementById("input"), infosLibrary, "msg")
-        const infosKey1 = validate(document.getElementById("keySub"), infosMsg, "keySub")
-        const infosKey2 = validate(document.getElementById("keyTra"), infosKey1, "keyTra")
+        const infosMsg = validate(elementInput, infosLibrary, "msg")
+        const infosKey1 = validate(elementKeySub, infosMsg, "keySub")
+        const infosKey2 = validate(elementKeyTra, infosKey1, "keyTra")
 
-        // If no error has been thrown, encode or decode the message using the keys
+        // If no error has been thrown, update HTML, then encode or decode the message using the keys
+        elementInput.value = infosKey2.msg.toString()
+        updateHTML(elementInput)
+        elementKeySub.value = infosKey2.keySub.toString()
+        updateHTML(elementKeySub)
+        elementKeyTra.value = infosKey2.keyTra.toString()
+        updateHTML(elementKeyTra)
+
         const infosResult = crypt(infosKey2)
 
         // Update HTML
@@ -156,19 +167,17 @@ function validate(element, infos, contentID) {
 
     // If the element is one of the keys
     if (contentID != "msg") {
-        let errorMsg = (contentID == "keySub" ? "keySub" : "keyTra")
+        let errorMsg = (contentID == "keySub" ? "substitution" : "transposition")
 
-        // If the mode of encryption/decryption is not combined substitution and transposition
+        // If the mode of encryption/decryption is not substitution and transposition combined
+        // infos.mode == -1 -> substitution only, fill keyTra with zeros
+        // infos.mode == 1 -> transposition only, fill keySub with zeros
         if ((infos.mode == -1 && contentID == "keyTra") || (infos.mode == 1 && contentID == "keySub")) {
             let text = ""
 
             for (let i = 0; i < infos.msgLength; i++) {
                 text += "0".toString()
             }
-
-            // Update HTML
-            element.value = text.toString()
-            updateHTML(element)
 
             // Update the object infos depending on which key is under consideration
             infos.mode == -1 ? infos.keyTra = text.toString() : infos.keySub = text.toString()
@@ -228,10 +237,6 @@ function validate(element, infos, contentID) {
                 throw new Error("the " + errorMsg + " key cannot be longer than the message.")
             }
             
-            // Update HTML
-            element.value = value.toString()
-            updateHTML(element)
-
             // Update the object infos depending on which key has been validated
             contentID == "keySub" ? infos.keySub = value.toString() : infos.keyTra = value.toString()
 
@@ -260,10 +265,6 @@ function validate(element, infos, contentID) {
                 // Update the object infos
                 infos.msg = value.toString()
                 infos.msgLength = infos.msg.length
-
-                // Update HTML and CSS
-                element.value = infos.msg.toString()
-                updateHTML(element)
 
                 return infos
             }
