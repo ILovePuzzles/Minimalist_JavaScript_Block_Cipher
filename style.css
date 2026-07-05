@@ -48,10 +48,6 @@ textarea {
     width: 100vw;
 }
 
-.error {
-    color: red
-}
-
 .flexContainer {
     display: flex;
     flex-wrap: wrap;
