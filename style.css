@@ -35,7 +35,8 @@ fieldset {
 
 textarea {
     text-align: center;
-    width: 30ch;
+    min-width: 30ch;
+    max-width: 70ch;
 }
 
 .container {
