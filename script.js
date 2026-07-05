@@ -1,18 +1,17 @@
 const defaultLibrary = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ ." // Default library value
 const elementLibrary = document.getElementById("library") // HTML element with id="library"
 const elementOutput = document.getElementById("output") // HTML element with id="output"
+const elementMode = document.getElementById("mode") // HTML element with id="mode"
 
 elementLibrary.value = defaultLibrary // Upon loading the page load the default library
-updateCSS(elementLibrary) // Actualize the width of elementLibrary
 updateHTML(elementLibrary) // Actualize the character count of elementLibrary
+updateHTML(elementMode) // Actualize the actual mode of elementMode
 document.querySelectorAll(".field, #library").forEach(element => element.addEventListener("input", function () {
-    updateCSS(this)
-    if (element.id !== "output" && element.id != "seed") { updateHTML(this) }
-})) // Upon loading the page add an event listener that track "input" events for selected HTML elements
+    if (element.id != "output" && element.id != "seed") { updateHTML(this) }
+})) // Upon loading the page add an event listener that tracks "input" events for selected HTML elements
 document.querySelectorAll(".field, #library").forEach(element => element.addEventListener("focusout", function () {
-    updateCSS(this)
-    if (element.id !== "output" && element.id != "seed") { updateHTML(this) }
-})) // Upon loading the page add an event listener that track "focusout" events for selected HTML elements
+    if (element.id != "output" && element.id != "seed") { updateHTML(this) }
+})) // Upon loading the page add an event listener that tracks "focusout" events for selected HTML elements
 
 // Depending on which button is clicked, reset the input fields, show or hide instructions,
 // encode the message, or decode the message
@@ -20,48 +19,59 @@ document.getElementById("reset").onclick = function() { reset() }
 document.getElementById("instrubtn").onclick = function() { instruct() }
 document.getElementById("encode").onclick = function() { convert(true) }
 document.getElementById("decode").onclick = function() { convert(false) }
+document.getElementById("mode").onclick = function() { updateHTML(elementMode) }
 
 
 
 
-
-// Method that updates the element width provided as an argument, in "ch" units
-function updateCSS(element) {
-    let elementLength = element.value.length
-
-    if (elementLength >= 60) {
-        element.style.width = 70 + "ch"
-        element.style.height = (Math.ceil(elementLength / 60) * 2 + 4) + "ch"
-    }
-    else if (elementLength > 20 && elementLength < 60) {
-        element.style.width = (elementLength + 10) + "ch"
-        element.style.height = 4 + "ch"
-    }
-    else {
-        element.style.width = 30 + "ch"
-        element.style.height = 4 + "ch"
-    }
-
-}
 
 // Method that updates the HTML
 function updateHTML(element) {
-    document.querySelector(`#${element.id}P`).textContent = `Character count: ${element.value.length}`
+    if (element.id != "mode") {
+        document.querySelector(`#${element.id}P`).textContent = `Character count: ${element.value.length}`
+    }
+
+    else {
+        let keySub = document.getElementById("keySub")
+        let keyTra = document.getElementById("keyTra")
+        keySub.readOnly = false
+        keyTra.readOnly = false
+
+        let text
+
+        switch (Number(element.value)) {
+            case -1:
+                text = "Substitution only mode"
+                keyTra.readOnly = true
+                break
+            case 0:
+                text = "Transposition and substitution mode"
+                break
+            case 1:
+                text = "Transposition only mode"
+                keySub.readOnly = true
+                break
+        }
+
+        document.querySelector(`#${element.id}P`).textContent = text
+    }
 }
 
 // Method that resets the fields
 function reset() {
     document.querySelectorAll(".field").forEach(element => {
         element.value = ""
-        updateCSS(element)
 
         let elementId = element.id
 
         if (elementId !== "output" && element.id != "seed") { document.querySelector(`#${elementId}P`).textContent = ``}
+        if (elementId == "mode") { document.querySelector(`#${element.id}P`).textContent = `` }
     }) // Reset the fields
     elementLibrary.value = defaultLibrary // Upon loading the page load the default library
-    updateCSS(elementLibrary) // Actualize the width of elementLibrary
     updateHTML(elementLibrary) // Actualize the character count of elementLibrary
+    elementMode.value = 0
+    updateHTML(elementMode)
+    document.getElementById("pseudorandom").checked = true
 }
 
 // Method that shows/hides instructions
@@ -82,31 +92,32 @@ function convert(encode) {
             keySub: "",
             keyTra: "",
             encode: encode,
+            mode: Number(elementMode.value),
             result: ""
         }
 
         // Validate then set the values for the object infos
         const infosLibrary = setLibrary(elementLibrary.value, infosEmpty)
-        const infosMsg = validate(document.getElementById("input"), infosLibrary, 0)
-        const infosKey1 = validate(document.getElementById("keySub"), infosMsg, 1)
-        const infosKey2 = validate(document.getElementById("keyTra"), infosKey1, 2)
-
+        const infosMsg = validate(document.getElementById("input"), infosLibrary, "msg")
+        const infosKey1 = validate(document.getElementById("keySub"), infosMsg, "keySub")
+        const infosKey2 = validate(document.getElementById("keyTra"), infosKey1, "keyTra")
 
         // If no error has been thrown, encode or decode the message using the keys
-        // Once the message has been converted, show the output value
-        infosKey2.result = infosKey2.msg
-        const infosResult1 = (encode ? transpose(infosKey2) : substitute(infosKey2))
-        const infosResult2 = (encode ? substitute(infosResult1) : transpose(infosResult1))
+        const infosResult = crypt(infosKey2)
 
-        // Update HTML and CSS
-        elementOutput.value = infosResult2.result.toString()
-        updateCSS(elementOutput)
+        // Update HTML
+        elementOutput.value = infosResult.result.toString()
+        elementOutput.style.color = 'black'
+        elementOutput.style.fontWeight = 'normal'
+        elementOutput.style.borderColor = 'black'
     }
 
     catch (error) {
-        // Update HTML and CSS
+        // Update HTML
         elementOutput.value = error
-        updateCSS(elementOutput)
+        elementOutput.style.color = 'red'
+        elementOutput.style.fontWeight = 'bold'
+        elementOutput.style.borderColor = 'red'
     }
 }
 
@@ -144,11 +155,29 @@ function validate(element, infos, contentID) {
     const valueLength = value.length
 
     // If the element is one of the keys
-    if (contentID != 0) {
-        let errorMsg = (contentID == 1 ? "substitution" : "transposition")
+    if (contentID != "msg") {
+        let errorMsg = (contentID == "keySub" ? "keySub" : "keyTra")
+
+        // If the mode of encryption/decryption is not combined substitution and transposition
+        if ((infos.mode == -1 && contentID == "keyTra") || (infos.mode == 1 && contentID == "keySub")) {
+            let text = ""
+
+            for (let i = 0; i < infos.msgLength; i++) {
+                text += "0".toString()
+            }
+
+            // Update HTML
+            element.value = text.toString()
+            updateHTML(element)
+
+            // Update the object infos depending on which key is under consideration
+            infos.mode == -1 ? infos.keyTra = text.toString() : infos.keySub = text.toString()
+
+            return infos
+        }
 
         // If the key is made of characters from the library
-        if (validateCharactersContent(value, valueLength, infos.library)) {
+        else if (validateCharactersContent(value, valueLength, infos.library)) {
             // If the key is smaller than the message
             if (valueLength < infos.msgLength) {
                 // If the element id="repeat" is checked and the key is not empty, repeat the existing pattern
@@ -161,7 +190,7 @@ function validate(element, infos, contentID) {
                 // If the element id="pseudorandom" is checked instead, then add pseudorandom characters to the message
                 else if (document.getElementById("pseudorandom").checked) {
                     // If we are validating the seed value for the first time
-                    if (contentID == 1) {
+                    if (contentID == "keySub") {
                         let seedValue = document.getElementById("seed").value
           
                         // If the seed has a defined value, validate the value
@@ -199,13 +228,12 @@ function validate(element, infos, contentID) {
                 throw new Error("the " + errorMsg + " key cannot be longer than the message.")
             }
             
-            // Update HTML and CSS
+            // Update HTML
             element.value = value.toString()
-            updateCSS(element)
             updateHTML(element)
 
             // Update the object infos depending on which key has been validated
-            contentID == 1 ? infos.keySub = value.toString() : infos.keyTra = value.toString()
+            contentID == "keySub" ? infos.keySub = value.toString() : infos.keyTra = value.toString()
 
             return infos
         }
@@ -234,8 +262,7 @@ function validate(element, infos, contentID) {
                 infos.msgLength = infos.msg.length
 
                 // Update HTML and CSS
-                element.value = infos.msg
-                updateCSS(element)
+                element.value = infos.msg.toString()
                 updateHTML(element)
 
                 return infos
@@ -257,98 +284,119 @@ function validate(element, infos, contentID) {
     function validateCharactersContent(value, valueLength, library) {
         // If the value contains a character that is not in the library, then the value is not valid
         for (let i = 0; i < valueLength; i++) {
-            if (!library.includes(value[i])) { return false }
+            if (!library.includes(value[i].toString())) { return false }
         }
 
         return true
     }
 }
 
-// Method that substitutes the characters and returns a string
-function substitute(infos) {
-    let result = ""
-    // The counter servers two purposes :
-    // 1. It helps to split the message into smaller substrings;
-    // 2. It helps to shift the library, in order to reuse the keys differently.
-    let counter = -1
-    let partialMsg
-    let partialKey
-    let initPos = 0
-    let substitution = 0
-    let finalPos = 0
+// Method that encrypts/decrypts the message using the keys
+function crypt(infos) {
+    infos.result = infos.msg.toString()
 
-    // Define the sign accordingly to encoding vs decoding; encoding is based on modular addition,
-    // while decoding is based on modular subtraction
-    const sign = (infos.encode ? 1 : -1)
-
-    // While the message has not been completely transformed
-    while (++counter * infos.libraryLength < infos.msgLength) {
-        // Split the input message and key into substrings of the length of the library
-        partialMsg = Array.from(infos.result.toString().substring(counter * infos.libraryLength, (counter + 1) * infos.libraryLength))
-        partialKey = Array.from(infos.keySub.toString().substring(counter * infos.libraryLength, (counter + 1) * infos.libraryLength))
-
-        for (let i = 0; i < infos.libraryLength; i++) {
-            // Find actual symbol index value
-            initSymb = infos.library.indexOf(partialMsg[i].toString())
-            // Find transposition displacement value using key
-            substitution = infos.library.indexOf(partialKey[i].toString())
-            // Compute (initial position + displacement + counter) mod infos.libraryLength
-            finalSymb = (initSymb + sign * (substitution + counter) + 2 * infos.libraryLength) % infos.libraryLength
-
-            // Substitute the old symbol for the new one
-            partialMsg[i] = infos.library[finalSymb].toString()
-        }
-
-        // Join the characters and add the string to result
-        result += partialMsg.join("")
+    switch (infos.mode) {
+        case -1:
+            infos.encode ? infos.result = substitute(infos).toString() : infos.result =  substitute(infos).toString()
+            break
+        case 0:
+            infos.encode ? infos.result = transpose(infos).toString() : infos.result = substitute(infos).toString()
+            infos.encode ? infos.result = substitute(infos).toString() : infos.result = transpose(infos).toString()
+            break
+        case 1:
+            infos.encode ? infos.result = transpose(infos).toString() : infos.result = transpose(infos).toString()
+            break
     }
 
-    infos.result = result
-
     return infos
-}
 
-// Method that transposes the characters and returns a string
-function transpose(infos) {
-    let result = ""
-    // The counter servers two purposes :
-    // 1. It helps to split the message into smaller substrings;
-    // 2. It helps to shift the library, in order to reuse the keys differently.
-    let counter = -1
-    let partialMsg
-    let partialKey
-    let transposition = 0
-    let finalPos = 0
 
-    // Define the start, end, and step values according to encoding vs decoding; encoding starts from the beginning of
-    // the string up to the end, while decoding starts from the end of the string down to the beginning
-    const start = (infos.encode ? 0 : infos.libraryLength - 1)
-    const end = (infos.encode ? infos.libraryLength : -1)
-    const step = (infos.encode ? 1 : -1)
 
-    // While the message has not been completely transformed
-    while (++counter * infos.libraryLength < infos.msgLength) {
-        // Split the input message and key into substrings of the length of the library
-        partialMsg = Array.from(infos.result.toString().substring(counter * infos.libraryLength, (counter + 1) * infos.libraryLength))
-        partialKey = Array.from(infos.keyTra.toString().substring(counter * infos.libraryLength, (counter + 1) * infos.libraryLength))
 
-        for (let initPos = start; initPos != end; initPos += step) {
-            // Find transposition displacement value using key
-            transposition = infos.library.indexOf(partialKey[initPos].toString())
-            // Compute (initial position + displacement + counter) mod infos.libraryLength
-            finalPos = (initPos + transposition + counter) % infos.libraryLength;
 
-            // Swap the character's positions
-            [partialMsg[initPos], partialMsg[finalPos]] = [partialMsg[finalPos], partialMsg[initPos]]
+    // Method that substitutes the characters and returns a string
+    function substitute(infos) {
+        // The counter servers two purposes :
+        // 1. It helps to split the message into smaller substrings;
+        // 2. It helps to shift the library, in order to reuse the keys differently.
+        let counter = -1
+        let partialMsg
+        let partialKey
+        let result = ""
+
+        let initSymb
+        let substitution
+        let finalSymb
+        // Define the sign accordingly to encoding vs decoding; encoding is based on modular addition,
+        // while decoding is based on modular subtraction
+        const sign = (infos.encode ? 1 : -1)
+
+        // While the message has not been completely transformed
+        while (++counter * infos.libraryLength < infos.msgLength) {
+            // Split the input message and key into substrings of the length of the library
+            partialMsg = Array.from(infos.result.toString().substring(counter * infos.libraryLength, (counter + 1) * infos.libraryLength))
+            partialKey = Array.from(infos.keySub.toString().substring(counter * infos.libraryLength, (counter + 1) * infos.libraryLength))
+
+            for (let i = 0; i < infos.libraryLength; i++) {
+                // Find actual symbol index value
+                initSymb = infos.library.indexOf(partialMsg[i].toString())
+                // Find transposition displacement value using key
+                substitution = infos.library.indexOf(partialKey[i].toString())
+                // Compute (initial position + displacement + counter) mod infos.libraryLength
+                finalSymb = (initSymb + sign * (substitution + counter) + 2 * infos.libraryLength) % infos.libraryLength
+
+                // Substitute the old symbol for the new one
+                partialMsg[i] = infos.library[finalSymb].toString()
+            }
+
+            // Join the characters and add the string to result
+            result += partialMsg.join("")
         }
 
-        // Join the characters and add the string to result
-        result += partialMsg.join("")
+        return result
     }
 
-    infos.result = result
+    // Method that transposes the characters and returns a string
+    function transpose(infos) {
+        // The counter servers two purposes :
+        // 1. It helps to split the message into smaller substrings;
+        // 2. It helps to shift the library, in order to reuse the keys differently.
+        let counter = -1
+        let partialMsg
+        let partialKey
+        let result = ""
 
-    return infos
+        let initPos
+        let transposition
+        let finalPos
+        // Define the start, end, and step values according to encoding vs decoding; encoding starts from the beginning of
+        // the string up to the end, while decoding starts from the end of the string down to the beginning
+        const start = (infos.encode ? 0 : infos.libraryLength - 1)
+        const end = (infos.encode ? infos.libraryLength : -1)
+        const step = (infos.encode ? 1 : -1)
+
+        // While the message has not been completely transformed
+        while (++counter * infos.libraryLength < infos.msgLength) {
+            // Split the input message and key into substrings of the length of the library
+            partialMsg = Array.from(infos.result.toString().substring(counter * infos.libraryLength, (counter + 1) * infos.libraryLength))
+            partialKey = Array.from(infos.keyTra.toString().substring(counter * infos.libraryLength, (counter + 1) * infos.libraryLength))
+
+            for (initPos = start; initPos != end; initPos += step) {
+                // Find transposition displacement value using key
+                transposition = infos.library.indexOf(partialKey[initPos].toString())
+                // Compute (initial position + displacement + counter) mod infos.libraryLength
+                finalPos = (initPos + transposition + counter) % infos.libraryLength;
+
+                // Swap the character's positions
+                [partialMsg[initPos], partialMsg[finalPos]] = [partialMsg[finalPos], partialMsg[initPos]]
+            }
+
+            // Join the characters and add the string to result
+            result += partialMsg.join("")
+        }
+
+        return result
+    }
 }
 
 // Method that generates a pseudorandom number list (PRNG)
