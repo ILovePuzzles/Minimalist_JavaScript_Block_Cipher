@@ -89,6 +89,10 @@ function reset() {
     updateHTML(elementMode)
     // Reset the default key generation mode value
     document.getElementById("pseudorandom").checked = true
+    // Actualize the CSS for elementOutput
+    elementOutput.style.color = 'black'
+    elementOutput.style.fontWeight = 'normal'
+    elementOutput.style.borderColor = 'black'
 }
 
 // Method that shows/hides instructions
@@ -432,7 +436,7 @@ function crypt(infos) {
     }
 }
 
-// Method that generates a pseudorandom number list (PRNG)
+// Method that generates a list of pseudorandom numbers using a seed (PRNG)
 function inversiveCongruentialGenerator(valueCount, libraryLength, seed, msgBool) {
     // Create a temp object to store the list of pseudorandom numbers. If the seed is used to
     // generate/complete the keys, store the final value of the seed in the object
