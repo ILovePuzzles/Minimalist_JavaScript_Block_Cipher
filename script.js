@@ -100,12 +100,15 @@ function instruct() {
 function convert(encode) {
     try {
         // Create an object to store the values
+        // NOTE: the seed and its related values must be casted as a BigInt data type, otherwise the
+        // multiplicativeInverse method will not work properly
         const infosEmpty = {
             library: "",
             libraryLength: 0,
             msg: "",
             msgLength: 0,
-            seed: undefined,
+            initSeed: -1n,
+            seed: -1n,
             keySub: "",
             keyTra: "",
             encode: encode,
@@ -127,6 +130,7 @@ function convert(encode) {
         // If no error has been thrown, update the HTML elements, then encode or decode the message using the keys
         elementInput.value = infosKey2.msg.toString()
         updateHTML(elementInput)
+        document.getElementById("seed").value = (infosKey2.initSeed != -1n ? infosKey2.initSeed : "")
         elementKeySub.value = infosKey2.keySub.toString()
         updateHTML(elementKeySub)
         elementKeyTra.value = infosKey2.keyTra.toString()
@@ -216,9 +220,9 @@ function validate(element, infos, contentID) {
                 // If the element id="pseudorandom" is checked instead, then add pseudorandom characters to the message
                 // to complete the key
                 else if (document.getElementById("pseudorandom").checked) {
-                    // If the property "seed" has not yet been defined, validate then set the seed value
+                    // If the property "initSeed" has not yet been defined, validate then set the seed value
                     // NOTE: the seed must be casted as a BigInt, otherwise the multiplicativeInverse method does not work properly
-                    if (infos.seed === undefined) {
+                    if (infos.initSeed == -1n) {
                         let seedValue = document.getElementById("seed").value
           
                         // If the seed has a defined value, validate the value
@@ -226,22 +230,25 @@ function validate(element, infos, contentID) {
                             // If the seed is not an integer, throw an error message
                             if (seedValue != Math.floor(seedValue)) { throw new Error("the seed must be an integer value.") }
                           
-                            // If the seed is an integer from 0 to 65536, set the value of infos.seed
-                            else if (seedValue > -1 && seedValue < 65537) { infos.seed = BigInt(document.getElementById("seed").value) }
+                            // If the seed is an integer from 0 to 65536, set the value of infos.initSeed
+                            else if (seedValue > -1 && seedValue < 65537) { infos.initSeed = BigInt(document.getElementById("seed").value) }
                         
                             // If the value is off-range, throw an error message
                             else { throw new Error("the seed values must range from 0 to 65536.") }
                         }
 
-                        // If "seedValue" is empty, set the value to -1
-                        else { infos.seed = -1n }
+                        // If "seedValue" is empty, generate a seed
+                        else { infos.initSeed = generateASeed() }
+
+                        infos.seed = infos.initSeed
                     }
         
                     // Generate an object that contains a list of pseudorandom numbers and the last seed value
                     const tempObject = inversiveCongruentialGenerator(infos.msgLength - valueLength, infos.libraryLength, infos.seed, false)
                     infos.seed = tempObject.seed                    
 
-                    // Expand the string using the pseudorandom number list as index values for the library
+                    // Expand the message with padding characters until the message length is valid, using the
+                    // pseudorandom number list as index values for the library
                     for (let i = valueLength, count = 0; i < infos.msgLength; i++) {
                         value += infos.library[tempObject.list[count++]].toString()
                     }
@@ -273,8 +280,11 @@ function validate(element, infos, contentID) {
                 // If the message length is not equal to the library length nor a multiple of it,
                 // expand the message by adding copies of the same pseudorandom character at the end
                 if (valueLength % infos.libraryLength != 0) {
-                    const tempObject = inversiveCongruentialGenerator(1, infos.libraryLength, -1, true);
+                    // Create an object that will contain one pseudorandom value
+                    const tempObject = inversiveCongruentialGenerator(1, infos.libraryLength, generateASeed(), true);
 
+                    // Expand the message with a padding character until the message length is valid, using the
+                    // pseudorandom number list as an index value for the library
                     for (let i = valueLength; i < valueLength + infos.libraryLength - valueLength % infos.libraryLength; i++) {
                         value += infos.library[tempObject.list[0]].toString()
                     }
@@ -300,6 +310,7 @@ function validate(element, infos, contentID) {
 
 
 
+    // Method that validates that the provided string value contains characters from the library only
     function validateCharactersContent(value, valueLength, library) {
         // If the value contains a character that is not in the library, then the value is not valid
         for (let i = 0; i < valueLength; i++) {
@@ -307,6 +318,11 @@ function validate(element, infos, contentID) {
         }
 
         return true
+    }
+
+    // Method that generates a seed from 0 to 65536
+    function generateASeed() {
+        return BigInt(Math.floor(Math.random() * 65537))
     }
 }
 
@@ -425,9 +441,6 @@ function inversiveCongruentialGenerator(valueCount, libraryLength, seed, msgBool
         seed: msgBool ? -1n : seed
     }
 
-    // If the seed is undefined, generate a pseudorandom seed
-    if (seed == -1n) { seed = BigInt(Math.floor(Math.random() * 256) + 1) }
-
     for (let i = 0; i < valueCount; i++) {
         // Inversive congruential pseudorandom number generator based on the primitive polynomial (x^2 - 46585x - 42403) over GF[65537]
         // NOTE: the seed and related values must be casted as BigInts. Otherwise the multiplicativeInverse method does not work properly
@@ -444,17 +457,25 @@ function inversiveCongruentialGenerator(valueCount, libraryLength, seed, msgBool
 
 
 
-    // Modular multiplicative inversion based on Fermat's Little theorem
+    // Modular multiplicative inversion based on Fermat's little theorem
+    // The theorem states:
+    // Given two positive integers a and p, where a is coprime to p, the following expression holds:
+    // a^(p - 1) % p == 1
+    // Since a * a^(p - 2) == a^(p - 1), the above expression implies:
+    // a * a^(p - 2) % p == 1
+    // Hence, a^(p - 2) is the modular multiplicative inverse of a
     function multiplicativeInverse(a) {
-        // 1 and 65536 are their own multiplicative inverse
+        // 1 and 65536 are their own multiplicative inverses
         if (a == 1n || a == 65536n) { return a }
 
         let b = a
 
-        // Each cycle of the for loop is equivalent to f(a) = b * a^2 = b^3
-        // f(f(a)) = b^3 * a^4 = b^7
-        // If we represent the n-th cycle by a number n from 1 to 3, we can write f^n(a) = a^(2^(n + 1) - 1)
-        // If n = 7, on obtient f^7(a) = a^(2^(7 + 1) - 1) = a^(256 - 1) = a^255, ce qui est le résultat attendu
+        // Each cycle of the for loop is equivalent to the function: f(a) = (b * a^2) % 65537 -> b^3 % 65537
+        // Then f^2(a) = f(f(a)) is equivalent to: f(f(a)) = (b^3 * a^4) % 65537 -> b^7 % 65537
+        // If we represent the n-th cycle of the for loop by a number n from 1 to 15, we can write f^n(a) as:
+        // f^n(a) = a^(2^n) * b^(2^n - 1) % 65537 -> b^(2^n) * b^(2^n - 1) % 65537 = b^(2^n + 2^n - 1) % 65537 =
+        // b^(2 * 2^n - 1) % 65537 = b^(2^(n + 1) - 1) % 65537
+        // If n = 15, we get f^15(a) -> b^(2^(15 + 1) - 1) % 65537 = b^(65536 - 1) % 65537 = b^65535 % 65537
         for (let i = 0; i < 15; i++) {
             a = reduce(a * a)
             a = reduce(b * a)
@@ -467,7 +488,7 @@ function inversiveCongruentialGenerator(valueCount, libraryLength, seed, msgBool
             // Fast modular reduction, with a possibility of negative values
             let r = (c & 65535n) - (c >> 16n)
 
-            // Value correction for negative results
+            // Value correction for negative results only
             if (r < 0n) { r += 65537n }
 
             return r
