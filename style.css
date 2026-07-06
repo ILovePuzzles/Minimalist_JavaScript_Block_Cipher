@@ -2,11 +2,29 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    font-family: Arial;
+    font-family: Arial, sans-serif;
 }
 
 body {
     text-align: center;
+}
+
+button {
+    padding: 0 2ch;
+    font-size: inherit;
+    border: 1px solid black;
+    border-radius: 4px;
+    background-color: lightgray;
+    color: black;
+}
+
+button:hover {
+    background-color: darkgray;
+    color: white;
+}
+
+fieldset {
+    border-style: none;
 }
 
 input, p {
@@ -23,15 +41,6 @@ input[type="radio"] {
     width: 5ch;
 }
 
-button {
-    padding: 0 2ch;
-    font-size: inherit;
-}
-
-fieldset {
-    border-style: none;
-}
-
 textarea {
     text-align: center;
     align-content: center;
@@ -44,8 +53,8 @@ textarea {
 }
 
 .container {
-    margin: 4ch 0 4ch;
-    width: 100vw;
+    padding: 4ch 0 4ch;
+    width: 100ch;
 }
 
 .flexContainer {
@@ -102,4 +111,16 @@ textarea {
 
 #instrubtn {
     width: 20ch;
+}
+
+#mode {
+    accent-color: black;
+}
+
+#pseudorandom, #repeat {
+    accent-color: black;
+}
+
+#symCipherImg {
+    max-width: 70ch;
 }
