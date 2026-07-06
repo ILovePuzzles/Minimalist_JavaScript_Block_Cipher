@@ -4,133 +4,143 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Minimalist JavaScript Polyalphabetic Cipher</title>
+    <link rel="icon" type="image/png" href="lock.png">
     <link rel="stylesheet" href="style.css">
     <script src="script.js" defer></script>
 </head>
 <body>
 
-    <div class="container flexContainer">
-        <h2>MINIMALIST SUBSTITUTION AND TRANSPOSITION CIPHER</h2>
+    <div class="flexContainer">
+        <div class="container">
+            <h1>MINIMALIST SUBSTITUTION AND TRANSPOSITION CIPHER</h1>
 
-        <br>
-        <br>
+            <br>
+            <br>
 
-        <div id="instructions">
-            <p>***** INSTRUCTIONS *****</p>
+            <div>
+                <img id="symCipherImg" src="symmetric_cipher.png" alt="Symmetric cipher">
+            </div>
+
+            <br>
+            <br>
+
+            <div id="instructions">
+                <h3>CIPHER INSTRUCTIONS</h3>
+
+                <br>
+
+                <p>The library cannot contain the same character more than once;<br>
+                    The library must contain at least 2 characters, up to a maximum of 256 characters;<br>
+                    The input message and the two keys can only contain characters from the library;<br>
+                    The two keys must not be longer than the input message;<br>
+                    If your message and the keys are not a multiple of the length of the library, then additionnal characters will be added at the end;<br>
+                    If you choose to complete your keys using pseudorandom characters, then you may leave the input blank, or choose a seed from 0 to 65536.</p>
+                    <br>
+            </div>
+
+            <div>
+                <button id="instrubtn" type="button">Show/hide instructions</button>    
+            </div>
+           
+            <br>
+            <br>
+
+            <label>Input message</label>
+            <div>
+                <textarea id="input" class="field"></textarea>
+                <p id="inputP"></p>
+            </div>
+
 
             <br>
 
-            <p>The library cannot contain the same character more than once;<br>
-                The library must contain at least 2 characters, up to a maximum of 256 characters;<br>
-                The input message and the two keys can only contain characters from the library;<br>
-                The two keys must not be longer than the input message;<br>
-                If your message and the keys are not a multiple of the length of the library, then additionnal characters will be added at the end;<br>
-                If you choose to complete your keys using pseudorandom characters, then you may leave the input blank, or choose a seed from 0 to 65536.</p>
-        </div>
-
-        <br>
-
-        <div>
-            <button id="instrubtn" type="button">Show/hide instructions</button>    
-        </div>
-
-        <br>
-
-        <label>Input message</label>
-        <div>
-            <textarea id="input" class="field"></textarea>
-            <p id="inputP"></p>
-        </div>
+            <label>Library</label>
+            <div>
+                <textarea id="library" type="text"></textarea>
+                <p id="libraryP"></p>
+            </div>
 
 
-        <br>
+            <br>
 
-        <label>Library</label>
-        <div>
-            <textarea id="library" type="text"></textarea>
-            <p id="libraryP"></p>
-        </div>
-
-
-        <br>
-
-        <label>Substitution key</label>
-        <div>
-            <textarea id="keySub" class="field"></textarea>
-            <p id="keySubP"></p>
-        </div>
+            <label>Substitution key</label>
+            <div>
+                <textarea id="keySub" class="field"></textarea>
+                <p id="keySubP"></p>
+            </div>
 
 
 
-        <br>
+            <br>
 
-        <label>Transposition key</label>
-        <div>
-            <textarea id="keyTra" class="field"></textarea>
-            <p id="keyTraP"></p>
-        </div>
-   
+            <label>Transposition key</label>
+            <div>
+                <textarea id="keyTra" class="field"></textarea>
+                <p id="keyTraP"></p>
+            </div>
+    
 
-        <br>
+            <br>
 
-        <div class="divKeysNButtons">
-            <fieldset>
-
-                <div>
-                    <legend>Choose a mode to complete the keys, if the keys are shorter than the message:</legend>
-                </div>
-                
-                <div class="divModeKeys">
-                    <div class="divMode1">
-                        <div>
-                            <label for="pseudorandom">Mode 1, add pseudorandom characters</label>
-                            <input type="radio" id="pseudorandom" name="completeFields" checked>
-                        </div>
-
-                        <div class="divSeed">
-                            <input id="seed" class="field" type="number" placeholder="Select seed value: 0-65536" min="0" max="65536">
-                        </div>
-                    </div>
+            <div class="divKeysNButtons">
+                <fieldset>
 
                     <div>
-                        <label for="repeat">Mode 2, repeat existing pattern</label>
-                        <input type="radio" id="repeat" name="completeFields">
+                        <legend>Choose a mode to complete the keys, if the keys are shorter than the message:</legend>
                     </div>
+                    
+                    <div class="divModeKeys">
+                        <div class="divMode1">
+                            <div>
+                                <label for="pseudorandom">Mode 1, add pseudorandom characters</label>
+                                <input type="radio" id="pseudorandom" name="completeFields" checked>
+                            </div>
+
+                            <div class="divSeed">
+                                <input id="seed" class="field" type="number" placeholder="Select seed value: 0-65536" min="0" max="65536">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="repeat">Mode 2, repeat existing pattern</label>
+                            <input type="radio" id="repeat" name="completeFields">
+                        </div>
+                    </div>
+
+                </fieldset>
+            </div>
+
+            <br>
+
+            <div class="divKeysNButtons">
+                <div class="flexButtons">
+                    <button id="encode" type="button">Encode</button>
+
+                    <div>
+                        <label for="mode">Type of encryption/decryption</label>
+                        <br>
+                        <input type="range" id="mode" min="-1" max="1" step="1" value="0">
+                        <p id="modeP"></p>
+                    </div>
+
+                    <button id="decode" type="button">Decode</button>
                 </div>
+            </div>
 
-            </fieldset>
-        </div>
+            <br>
 
-        <br>
+            <label for="output">Output message</label>
+            <div>
+                <textarea id="output" class="field" readonly></textarea>
+            </div>
 
-        <div class="divKeysNButtons">
-            <div class="flexButtons">
-                <button id="encode" type="button">Encode</button>
-
-                <div>
-                    <label for="mode">Type of encryption/decryption</label>
-                    <br>
-                    <input type="range" id="mode" min="-1" max="1" step="1" value="0">
-                    <p id="modeP"></p>
-                </div>
-
-                <button id="decode" type="button">Decode</button>
+            <br>
+            
+            <div>
+                <button id="reset" type="button">Reset fields</button>
             </div>
         </div>
-
-        <br>
-
-        <label for="output">Output message</label>
-        <div>
-            <textarea id="output" class="field" readonly></textarea>
-        </div>
-
-        <br>
-        
-        <div>
-            <button id="reset" type="button">Reset fields</button>
-        </div>
     </div>
-    
+
 </body>
 </html>
