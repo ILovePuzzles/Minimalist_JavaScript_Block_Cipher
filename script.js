@@ -334,17 +334,29 @@ function validate(element, infos, contentID) {
 function crypt(infos) {
     infos.result = infos.msg.toString()
 
+    // The counter helps to split the message into smaller substrings
+    let counter = -1
+    let partialMsg
+    let partialKey
+    let result = ""
+    let initValue
+    let valueShift
+    let finalValue
+
     // Select encryption/decryption mode
     switch (infos.mode) {
         case -1:
-            infos.encode ? infos.result = substitute(infos).toString() : infos.result =  substitute(infos).toString()
+            infos.result = substitute(infos, counter, partialMsg, partialKey, result, initValue, valueShift, finalValue).toString()
             break
         case 0:
-            infos.encode ? infos.result = transpose(infos).toString() : infos.result = substitute(infos).toString()
-            infos.encode ? infos.result = substitute(infos).toString() : infos.result = transpose(infos).toString()
+            infos.encode ? infos.result = substitute(infos, counter, partialMsg, partialKey, result, initValue, valueShift, finalValue).toString() :
+            infos.result = transpose(infos, counter, partialMsg, partialKey, result, initValue, valueShift, finalValue).toString()
+
+            infos.encode ? infos.result = transpose(infos, counter, partialMsg, partialKey, result, initValue, valueShift, finalValue).toString() :
+            infos.result = substitute(infos, counter, partialMsg, partialKey, result, initValue, valueShift, finalValue).toString()
             break
         case 1:
-            infos.encode ? infos.result = transpose(infos).toString() : infos.result = transpose(infos).toString()
+            infos.result = transpose(infos, counter, partialMsg, partialKey, result, initValue, valueShift, finalValue).toString()
             break
     }
 
@@ -355,16 +367,7 @@ function crypt(infos) {
 
 
     // Method that substitutes the characters and returns a string
-    function substitute(infos) {
-        // The counter helps to split the message into smaller substrings
-        let counter = -1
-        let partialMsg
-        let partialKey
-        let result = ""
-
-        let initSymb
-        let substitution
-        let finalSymb
+    function substitute(infos, counter, partialMsg, partialKey, result, initSymb, substitution, finalSymb) {
         // Define the sign accordingly to encoding vs decoding; substitution encoding is based on modular addition,
         // while substitution decoding is based on modular subtraction
         const sign = (infos.encode ? 1 : -1)
@@ -395,16 +398,7 @@ function crypt(infos) {
     }
 
     // Method that transposes the characters and returns a string
-    function transpose(infos) {
-        // The counter helps to split the message into smaller substrings
-        let counter = -1
-        let partialMsg
-        let partialKey
-        let result = ""
-
-        let initPos
-        let transposition
-        let finalPos
+    function transpose(infos, counter, partialMsg, partialKey, result, initPos, transposition, finalPos) {
         // Define the start, end, and step values according to encoding vs decoding; transposition encoding
         // starts from the beginning of the string up to the end, while transposition decoding starts from
         // the end of the string down to the beginning
@@ -473,6 +467,8 @@ function inversiveCongruentialGenerator(valueCount, libraryLength, seed, msgBool
         if (a == 1n || a == 65536n) { return a }
 
         let b = a
+        // Variable for the method reduce
+        let r
 
         // Each cycle of the for loop is equivalent to the function: f(a) = (b * a^2) % 65537 -> b^3 % 65537
         // Then f^2(a) = f(f(a)) is equivalent to: f(f(a)) = (b^3 * a^4) % 65537 -> b^7 % 65537
@@ -481,16 +477,16 @@ function inversiveCongruentialGenerator(valueCount, libraryLength, seed, msgBool
         // b^(2 * 2^n - 1) % 65537 = b^(2^(n + 1) - 1) % 65537
         // If n = 15, we get f^15(a) -> b^(2^(15 + 1) - 1) % 65537 = b^(65536 - 1) % 65537 = b^65535 % 65537
         for (let i = 0; i < 15; i++) {
-            a = reduce(a * a)
-            a = reduce(b * a)
+            a = reduce(a * a, r)
+            a = reduce(b * a, r)
         }
 
         return a;
 
         // Modular reduction
-        function reduce(c) {
+        function reduce(c, r) {
             // Fast modular reduction, with a possibility of negative values
-            let r = (c & 65535n) - (c >> 16n)
+            r = (c & 65535n) - (c >> 16n)
 
             // Value correction for negative results only
             if (r < 0n) { r += 65537n }
