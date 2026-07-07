@@ -12,12 +12,12 @@ updateHTML(elementLibrary)
 // Actualize the text below elementMode (actual mode description)
 updateHTML(elementMode)
 
- // Upon loading the page add an event listener that tracks "input" and "focusout" events for selected HTML elements
+// Upon loading the page add an event listener that tracks "input" and "focusout" events for selected HTML elements
 document.querySelectorAll(".field, #library").forEach(element => element.addEventListener("input", function () {
-    if (element.id != "output" && element.id != "seed") { updateHTML(this) }
+    updateHTML(this)
 }))
 document.querySelectorAll(".field, #library").forEach(element => element.addEventListener("focusout", function () {
-    if (element.id != "output" && element.id != "seed") { updateHTML(this) }
+    updateHTML(this)
 }))
 
 // Depending on which element is clicked, reset the input fields, show or hide the instructions,
@@ -70,13 +70,13 @@ function updateHTML(element) {
 // Method that resets the fields
 function reset() {
     // For each element with the "field" class, reset the values
-    document.querySelectorAll(".field").forEach(element => {
+    document.querySelectorAll(".field", "#mode").forEach(element => {
         element.value = ""
-
-        let elementId = element.id
-
-        if (elementId !== "output" && element.id != "seed") { document.querySelector(`#${elementId}P`).textContent = ``}
-        if (elementId == "mode") { document.querySelector(`#${element.id}P`).textContent = `` }
+        document.querySelector(`#${element.id}P`).textContent = ``
+    })
+    // For each element with the "otherField" class, reset the values
+        document.querySelectorAll(".otherField").forEach(element => {
+        element.value = ""
     })
 
     // Reload the default library
@@ -87,8 +87,6 @@ function reset() {
     elementMode.value = 0
     // Actualize the text below elementMode (actual mode description)
     updateHTML(elementMode)
-    // Reset the default key generation mode value
-    document.getElementById("pseudorandom").checked = true
     // Actualize the CSS for elementOutput
     elementOutput.style.color = 'black'
     elementOutput.style.fontWeight = 'normal'
@@ -111,9 +109,11 @@ function convert(encode) {
             libraryLength: 0,
             msg: "",
             msgLength: 0,
-            initSeed: -1n,
-            seed: -1n,
+            prngSub: -1,
+            seedSub: -1n,
             keySub: "",
+            prngTra: -1,
+            seedTra: -1n,
             keyTra: "",
             encode: encode,
             mode: Number(elementMode.value),
@@ -134,11 +134,15 @@ function convert(encode) {
         // If no error has been thrown, update the HTML elements, then encode or decode the message using the keys
         elementInput.value = infosKey2.msg.toString()
         updateHTML(elementInput)
-        document.getElementById("seed").value = (infosKey2.initSeed != -1n ? infosKey2.initSeed : "")
+        document.getElementById("prngSub").value = (infosKey2.prngSub != -1 ? infosKey2.prngSub : "")
+        document.getElementById("seedSub").value = (infosKey2.seedSub != -1n ? infosKey2.seedSub : "")
+        document.getElementById("prngTra").value = (infosKey2.prngTra != -1 ? infosKey2.prngTra : "")
+        document.getElementById("seedTra").value = (infosKey2.seedTra != -1n ? infosKey2.seedTra : "")
         elementKeySub.value = infosKey2.keySub.toString()
         updateHTML(elementKeySub)
         elementKeyTra.value = infosKey2.keyTra.toString()
         updateHTML(elementKeyTra)
+
         const infosResult = crypt(infosKey2)
 
         // Update "elementOutput" HTML value and CSS style
@@ -213,53 +217,31 @@ function validate(element, infos, contentID) {
         else if (validateCharactersContent(value, valueLength, infos.library)) {
             // If the key is smaller than the message
             if (valueLength < infos.msgLength) {
-                // If the element id="repeat" is checked and the key is not empty, repeat the existing pattern
-                // to complete the key
-                if (!document.getElementById("pseudorandom").checked && valueLength != 0) {
-                    for (let i = valueLength; i < infos.msgLength; i++) {
-                        value += value[i % valueLength].toString()
-                    }
+                let numberList
+
+                // If we are evaluating the substitution key
+                if (contentID == "keySub") {
+                    infos.prngSub = validatePRNGValue(document.getElementById("prngSub"), errorMsg)
+                    infos.seedSub = validateSeedValue(document.getElementById("seedSub"), errorMsg)
+
+                    // Generate a list of pseudorandom numbers
+                    numberList = inversiveCongruentialGenerator(infos.msgLength - valueLength, infos.libraryLength, infos.prngSub, infos.seedSub, false) 
                 }
 
-                // If the element id="pseudorandom" is checked instead, then add pseudorandom characters to the message
-                // to complete the key
-                else if (document.getElementById("pseudorandom").checked) {
-                    // If the property "initSeed" has not yet been defined, validate then set the seed value
-                    // NOTE: the seed must be casted as a BigInt, otherwise the multiplicativeInverse method does not work properly
-                    if (infos.initSeed == -1n) {
-                        let seedValue = document.getElementById("seed").value
-          
-                        // If the seed has a defined value, validate the value
-                        if (seedValue != "") {
-                            // If the seed is not an integer, throw an error message
-                            if (seedValue != Math.floor(seedValue)) { throw new Error("the seed must be an integer value.") }
-                          
-                            // If the seed is an integer from 0 to 65536, set the value of infos.initSeed
-                            else if (seedValue > -1 && seedValue < 65537) { infos.initSeed = BigInt(document.getElementById("seed").value) }
-                        
-                            // If the value is off-range, throw an error message
-                            else { throw new Error("the seed values must range from 0 to 65536.") }
-                        }
+                // If we are evaluating the transposition key
+                else {
+                    infos.prngTra = validatePRNGValue(document.getElementById("prngTra"), errorMsg)
+                    infos.seedTra = validateSeedValue(document.getElementById("seedTra"), errorMsg)
 
-                        // If "seedValue" is empty, generate a seed
-                        else { infos.initSeed = generateASeed() }
+                    // Generate a list of pseudorandom numbers
+                    numberList = inversiveCongruentialGenerator(infos.msgLength - valueLength, infos.libraryLength, infos.prngTra, infos.seedTra, false) 
+                }                 
 
-                        infos.seed = infos.initSeed
-                    }
-        
-                    // Generate an object that contains a list of pseudorandom numbers and the last seed value
-                    const tempObject = inversiveCongruentialGenerator(infos.msgLength - valueLength, infos.libraryLength, infos.seed, false)
-                    infos.seed = tempObject.seed                    
-
-                    // Expand the message with padding characters until the message length is valid, using the
-                    // pseudorandom number list as index values for the library
-                    for (let i = valueLength, count = 0; i < infos.msgLength; i++) {
-                        value += infos.library[tempObject.list[count++]].toString()
-                    }
+                // Expand the message with padding characters until the message length is valid, using the
+                // pseudorandom number list as index values for the library
+                for (let i = valueLength, count = 0; i < infos.msgLength; i++) {
+                    value += infos.library[numberList[count++]].toString()
                 }
-
-                // If the element id="repeat" is checked and the key is empty, throw an error
-                else { throw new Error("the " + errorMsg + " key cannot be empty if mode 2 is selected.") }
             }
 
             // If the key is longer than the message, throw an error
@@ -280,17 +262,20 @@ function validate(element, infos, contentID) {
         // If the message is made of characters from the library
         if (validateCharactersContent(value, valueLength, infos.library)) {
             // If the message length is valid
-            if (valueLength > 0 && valueLength < infos.libraryLength * infos.libraryLength + 1) {
+            // NOTE: the maximal length of the message has been set to 65536 since the period of the PRNG is exactly 65537,
+            // the message must be a multiple of the library length and 65537 is a prime number. The closest composite
+            // number below 65537 is 65536 = 2^16 = 256^2, which is equal to the maximal library length squared.
+            if (valueLength > 0 && valueLength < 65537) {
                 // If the message length is not equal to the library length nor a multiple of it,
                 // expand the message by adding copies of the same pseudorandom character at the end
                 if (valueLength % infos.libraryLength != 0) {
-                    // Create an object that will contain one pseudorandom value
-                    const tempObject = inversiveCongruentialGenerator(1, infos.libraryLength, generateASeed(), true);
+                    // Generate a list with one pseudorandom value
+                    const numberList = inversiveCongruentialGenerator(1, infos.libraryLength, Math.floor(Math.random() * 4) + 1, BigInt(Math.floor(Math.random() * 65537)), true);
 
                     // Expand the message with a padding character until the message length is valid, using the
                     // pseudorandom number list as an index value for the library
                     for (let i = valueLength; i < valueLength + infos.libraryLength - valueLength % infos.libraryLength; i++) {
-                        value += infos.library[tempObject.list[0]].toString()
+                        value += infos.library[numberList[0]].toString()
                     }
                 }
 
@@ -305,7 +290,7 @@ function validate(element, infos, contentID) {
             else if (valueLength == 0) { throw new Error("the message cannot be empty.") }
  
             // If the message is larger than the square of the library length, throw an error
-            else { throw new Error("the message cannot be longer than the square of the library length.") }
+            else { throw new Error("the message cannot be more than 65536 characters long.") }
         }
 
         // If the message contains characters that are not in the library, throw an error
@@ -324,9 +309,45 @@ function validate(element, infos, contentID) {
         return true
     }
 
-    // Method that generates a seed from 0 to 65536
-    function generateASeed() {
-        return BigInt(Math.floor(Math.random() * 65537))
+    // Method that validates the prngValue
+    function validatePRNGValue(prngElement, errorMsg) {
+        let prngValue = prngElement.value
+
+        // If "prngValue" has a defined value, validate the value
+        if (prngValue != "") {
+            // If the prngValue is not an integer, throw an error message
+            if (prngValue != Math.floor(prngValue)) { throw new Error("the " + errorMsg + " PRNG value must be an integer value.") }
+                            
+            // If the prngValue is an integer from 1 to 4, set the value of infos.prngSub
+            else if (prngValue > 0 && prngValue < 5) { return Number(prngElement.value) }
+                            
+            // If the value is off-range, throw an error message
+            else { throw new Error("the " + errorMsg + " PRNG values must range from 1 to 4.") }
+        }
+
+        // If "prngValue" is empty, generate a value from 1 to 4
+        else { return Math.floor(Math.random() * 4) + 1 }
+    }
+
+    function validateSeedValue(seedElement, errorMsg) {
+        let seedValue = seedElement.value
+
+        // If the seed has a defined value, validate the value
+        if (seedValue != "") {
+            // If the seed is not an integer, throw an error message
+            if (seedValue != Math.floor(seedValue)) { throw new Error("the " + errorMsg + " seed must be an integer value.") }
+                                
+            // If the seed is an integer from 0 to 65536, set the value of infos.seedSub
+            // NOTE: the seed must be casted as a BigInt, otherwise the multiplicativeInverse method does not work properly
+            else if (seedValue > -1 && seedValue < 65537) { return BigInt(seedElement.value) }
+                                
+            // If the value is off-range, throw an error message
+            else { throw new Error("the " + errorMsg + " values must range from 0 to 65536.") }
+        }
+
+        // If "seedValue" is empty, generate a seed from 0 to 65536
+        // NOTE: the seed must be casted as a BigInt, otherwise the multiplicativeInverse method does not work properly
+        else { return BigInt(Math.floor(Math.random() * 65537)) }
     }
 }
 
@@ -431,27 +452,43 @@ function crypt(infos) {
 }
 
 // Method that generates a list of pseudorandom numbers using a seed (PRNG)
-function inversiveCongruentialGenerator(valueCount, libraryLength, seed, msgBool) {
+function inversiveCongruentialGenerator(valueCount, libraryLength, prng, seed, msgBool) {
     // Create a temp object to store the list of pseudorandom numbers. If the seed is used to
     // generate/complete the keys, store the final value of the seed in the object
-    const tempObject = {
-        list: [],
-        seed: msgBool ? -1n : seed
+    const list = []
+    let a
+    let c
+
+    // Select an inversive congruential pseudorandom number generator based on a primitive polynomial such that
+    // x^2 - cx - a over GF[65537]
+    // NOTE: the seed and related values must be casted as BigInts. Otherwise the multiplicativeInverse method does not work properly
+    switch (prng) {
+        case 1:
+            a = BigInt(11549n)
+            c = BigInt(62819n)
+            break
+        case 2:
+            a = BigInt(19267n)
+            c = BigInt(52783n)
+            break
+        case 3:
+            a = BigInt(26981n)
+            c = BigInt(42829n)
+            break
+        case 4:
+            a = BigInt(42403n)
+            c = BigInt(32771n)
+            break
     }
 
     for (let i = 0; i < valueCount; i++) {
-        // Inversive congruential pseudorandom number generator based on the primitive polynomial (x^2 - 46585x - 42403) over GF[65537]
-        // NOTE: the seed and related values must be casted as BigInts. Otherwise the multiplicativeInverse method does not work properly
-        seed == 0n ? seed = 46585n : seed = BigInt((42403n * multiplicativeInverse(seed) + 46585n) % 65537n)
+        seed == 0n ? seed = c : seed = BigInt((a * multiplicativeInverse(seed) + c) % 65537n)
 
         // Cast the seed as a Number data type, since libraryLength is not a BigInt, but a Number data type
-        tempObject.list.push(Number(seed) % libraryLength)
+        list.push(Number(seed) % libraryLength)
     }
 
-    // If the seed has been used for generating key values, store the new seed value
-    if (!msgBool) { tempObject.seed = seed }
-
-    return tempObject
+    return list
 
 
 
