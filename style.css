@@ -23,10 +23,6 @@ button:hover {
     color: white;
 }
 
-fieldset {
-    border-style: none;
-}
-
 input, p {
     margin: 0 auto;
 }
@@ -77,7 +73,7 @@ textarea {
     padding: 1ch 0;
 }
 
-.divModeKeys {
+.divSeeds {
     display: flex;
     flex-wrap: wrap;
     flex-direction: row;
@@ -86,15 +82,11 @@ textarea {
     width: 70ch;
 }
 
-.divMode1 {
+.flexSeed {
     display: flex;
     flex-wrap: wrap;
     flex-direction: column;
     justify-content: center;
-}
-
-.divSeed {
-    padding: 1ch;
 }
 
 .flexButtons {
@@ -114,10 +106,6 @@ textarea {
 }
 
 #mode {
-    accent-color: black;
-}
-
-#pseudorandom, #repeat {
     accent-color: black;
 }
 
