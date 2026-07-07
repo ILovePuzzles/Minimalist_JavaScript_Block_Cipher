@@ -81,35 +81,46 @@
     
 
             <br>
+            <br>
 
             <div class="divKeysNButtons">
-                <fieldset>
-
-                    <div>
-                        <legend>Choose a mode to complete the keys, if the keys are shorter than the message:</legend>
-                    </div>
+                <div>
+                    <p>Define the PRNG and seed values, or leave blank to generate values automatically</p>
+                    <br>
+                </div>
                     
-                    <div class="divModeKeys">
-                        <div class="divMode1">
-                            <div>
-                                <label for="pseudorandom">Mode 1, add pseudorandom characters</label>
-                                <input type="radio" id="pseudorandom" name="completeFields" checked>
-                            </div>
-
-                            <div class="divSeed">
-                                <input id="seed" class="field" type="number" placeholder="Select seed value: 0-65536" min="0" max="65536">
-                            </div>
+                <div class="divSeeds">
+                    <div class="flexSeed">
+                        <div>
+                            <label for="prngSub">PRNG for substitution key</label>
+                            <br>
+                            <input type="number" id="prngSub" class="otherField" placeholder="Select PRNG: 1-4" min="1" max="4">
                         </div>
 
                         <div>
-                            <label for="repeat">Mode 2, repeat existing pattern</label>
-                            <input type="radio" id="repeat" name="completeFields">
+                            <label for="seedSub">Select a seed value</label>
+                            <br>
+                            <input type="number" id="seedSub" class="otherField" placeholder="Select seed value: 0-65536" min="0" max="65536">
                         </div>
                     </div>
 
-                </fieldset>
+                   <div class="flexSeed">
+                        <div>
+                            <label for="prngTra">PRNG for transposition key</label>
+                            <br>
+                            <input type="number" id="prngTra" class="otherField" placeholder="Select PRNG: 1-4" min="1" max="4">
+                        </div>
+
+                        <div>
+                            <label for="seedTra">Select a seed value</label>
+                            <br>
+                            <input type="number" id="seedTra" class="otherField" placeholder="Select seed value: 0-65536" min="0" max="65536">
+                        </div>
+                    </div>
+                </div>
             </div>
 
+            <br>
             <br>
 
             <div class="divKeysNButtons">
@@ -119,7 +130,7 @@
                     <div>
                         <label for="mode">Type of encryption/decryption</label>
                         <br>
-                        <input type="range" id="mode" min="-1" max="1" step="1" value="0">
+                        <input type="range" id="mode" class="otherField" min="-1" max="1" step="1" value="0">
                         <p id="modeP"></p>
                     </div>
 
@@ -131,7 +142,7 @@
 
             <label for="output">Output message</label>
             <div>
-                <textarea id="output" class="field" readonly></textarea>
+                <textarea id="output" class="otherField" readonly></textarea>
             </div>
 
             <br>
