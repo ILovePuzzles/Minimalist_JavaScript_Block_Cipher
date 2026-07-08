@@ -19,6 +19,29 @@ document.querySelectorAll(".field, #library").forEach(element => element.addEven
 document.querySelectorAll(".field, #library").forEach(element => element.addEventListener("focusout", function () {
     updateHTML(this)
 }))
+document.getElementById("colorTheme").addEventListener('change', (event) => {
+    if (event.target.type === 'radio') {
+        let body = document.body
+
+        if (event.target.value == "dark") {
+            body.className = ''
+            body.classList.add('dark-theme')
+            document.querySelectorAll('textarea, input').forEach(element => {
+                element.classList.remove('light-theme')
+                element.classList.add('dark-theme')
+            })
+        }
+
+        else {
+            body.className = ''
+            body.classList.add('light-theme')
+            document.querySelectorAll('textarea, input').forEach(element => {
+                element.classList.remove('dark-theme')
+                element.classList.add('light-theme')
+            })
+        }
+    }
+})
 
 // Depending on which element is clicked, reset the input fields, show or hide the instructions,
 // encode the message, decode the message, or update the text below elementMode
@@ -90,7 +113,7 @@ function reset() {
     // Actualize the CSS for elementOutput
     elementOutput.style.color = 'black'
     elementOutput.style.fontWeight = 'normal'
-    elementOutput.style.borderColor = 'black'
+    elementOutput.style.borderColor = 'rgba(212, 175, 55, 1)'
 }
 
 // Method that shows/hides instructions
@@ -149,7 +172,8 @@ function convert(encode) {
         elementOutput.value = infosResult.result.toString()
         elementOutput.style.color = 'black'
         elementOutput.style.fontWeight = 'normal'
-        elementOutput.style.borderColor = 'black'
+        elementOutput.style.borderColor = 'rgba(212, 175, 55, 1)'
+        elementOutput.focus()
     }
 
     catch (error) {
@@ -158,6 +182,7 @@ function convert(encode) {
         elementOutput.style.color = 'red'
         elementOutput.style.fontWeight = 'bold'
         elementOutput.style.borderColor = 'red'
+        elementOutput.focus()
     }
 }
 
@@ -444,7 +469,7 @@ function crypt(infos) {
                 // Find transposition displacement value using key
                 transposition = infos.library.indexOf(partialKey[initPos].toString())
                 // Compute (initial position index + displacement) mod infos.libraryLength
-                finalPos = (initPos + transposition) % infos.libraryLength;
+                finalPos = ((initPos + transposition) % infos.libraryLength)
 
                 // Swap the character's positions
                 [partialMsg[initPos], partialMsg[finalPos]] = [partialMsg[finalPos], partialMsg[initPos]]
@@ -467,24 +492,24 @@ function inversiveCongruentialGenerator(valueCount, libraryLength, prng, seed, m
     let c
 
     // Select an inversive congruential pseudorandom number generator based on a primitive polynomial such that
-    // x^2 - cx - a over GF[65537]
-    // NOTE: the seed and related values must be casted as BigInts. Otherwise the multiplicativeInverse method does not work properly
+    // x^2 - cx - a over GF(65537)
+    // NOTE: the seed and related values must be casted as BigInts. Otherwise the multiplicativeInverse method will not work properly
     switch (prng) {
         case 1:
-            a = BigInt(11549n)
-            c = BigInt(62819n)
+            a = 11549n
+            c = 62819n
             break
         case 2:
-            a = BigInt(19267n)
-            c = BigInt(52783n)
+            a = 19267n
+            c = 52783n
             break
         case 3:
-            a = BigInt(26981n)
-            c = BigInt(42829n)
+            a = 26981n
+            c = 42829n
             break
         case 4:
-            a = BigInt(42403n)
-            c = BigInt(32771n)
+            a = 42403n
+            c = 32771n
             break
     }
 
@@ -525,7 +550,7 @@ function inversiveCongruentialGenerator(valueCount, libraryLength, prng, seed, m
             a = reduce(b * a, r)
         }
 
-        return a;
+        return a
 
         // Modular reduction
         function reduce(c, r) {
