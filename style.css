@@ -2,113 +2,84 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    font-family: Arial, sans-serif;
+    font-family: Helvetica, Arial, "Trebuchet MS", "Lucida Grande", "Lucida Sans Unicode", sans-serif;
+    font-size: 1rem;
 }
 
-body {
-    text-align: center;
-}
-
-button {
-    padding: 0 2ch;
-    font-size: inherit;
-    border: 1px solid black;
-    border-radius: 4px;
-    background-color: lightgray;
-    color: black;
-}
-
-button:hover {
-    background-color: darkgray;
-    color: white;
-}
-
-input, p {
-    margin: 0 auto;
+fieldset {
+    border-style: none;
 }
 
 input {
     text-align: center;
-    width: 30ch;
-    font-size: inherit;
+    color: #000;
+    border-color: rgba(212, 175, 55, 1);
 }
 
 input[type="radio"] {
-    width: 5ch;
+    accent-color: black;
+}
+
+input[type="radio"]:hover {
+    accent-color: rgba(212, 175, 55, 1);
 }
 
 textarea {
     text-align: center;
     align-content: center;
-    field-sizing: content; 
-    font-size: inherit;
-    min-width: 30ch;
-    max-width: 70ch;
     min-height: 2lh;
     max-height: 6lh;
+    color: #000;
+    border-color: rgba(212, 175, 55, 1);
 }
 
-.container {
-    padding: 4ch 0 4ch;
-    width: 100ch;
+.btn-custom-gold {
+    color: #000;
+    background-color: rgba(212, 175, 55, 1);
+    border-color: rgba(212, 175, 55, 1);
 }
 
-.flexContainer {
-    display: flex;
-    flex-wrap: wrap;
-    flex-direction: column;
-    justify-content: center;
-    align-content: center;
+.btn-custom-gold:hover {
+    color: rgba(212, 175, 55, 1);
+    border-color: rgba(212, 175, 55, 1);
+    background-color: #000;
 }
 
-.divKeysNButtons {
-    display: flex;
-    flex-wrap: wrap;
-    flex-direction: column;
-    justify-content: center;
-    align-content: center;
+.btn-custom-gold:focus, .btn-custom-gold:focus-visible {
+    box-shadow: 0 0 0 0.25rem rgba(212, 175, 55, 0.5);
 }
 
-.divKeysNButtons legend, .divKeysNButtons label {
-    padding: 1ch 0;
+.btn-custom-gold:active {
+    transform: scale(0.95);
+    transition-duration: 1s;
 }
 
-.divSeeds {
-    display: flex;
-    flex-wrap: wrap;
-    flex-direction: row;
-    justify-content: space-between;
-    align-content: space-around;
-    width: 70ch;
+.dark-theme {
+    background-color: #000;
+    color: #fff;
 }
 
-.flexSeed {
-    display: flex;
-    flex-wrap: wrap;
-    flex-direction: column;
-    justify-content: center;
+.light-theme {
+    background-color: #fff;
+    color: #000;  
 }
 
-.flexButtons {
-    display: flex;
-    flex-wrap: wrap;
-    flex-direction: row;
-    justify-content: space-between;
-    width: 70ch;
+.field-sizing-content {
+    field-sizing: content;
+}
+
+.fs-inherit {
+    font-size: inherit !important;
 }
 
 .hidden {
     display: none;
 }
 
-#instrubtn {
-    width: 20ch;
-}
-
 #mode {
     accent-color: black;
 }
 
-#symCipherImg {
-    max-width: 70ch;
+#mode:hover {
+    accent-color: rgba(212, 175, 55, 1);
 }
