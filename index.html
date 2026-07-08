@@ -4,154 +4,234 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Minimalist Javascript Block Cipher</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
     <link rel="icon" type="image/png" href="lock.png">
     <link rel="stylesheet" href="style.css">
     <script src="script.js" defer></script>
 </head>
 <body>
 
-    <div class="flexContainer">
-        <div class="container">
-            <h1>MINIMALIST SUBSTITUTION AND TRANSPOSITION CIPHER</h1>
+    <!-- Center text, add flex (column), margin top = 5, and margin bottom = 5 -->
+    <div class="text-center d-flex flex-column mt-5 mb-5">
+        <!-- Container fluid, and margin auto -->
+        <div class="container-fluid m-auto">
 
             <br>
             <br>
 
-            <div>
-                <img id="symCipherImg" src="symmetric_cipher.png" alt="Symmetric cipher">
-            </div>
+            <header>
+                <!-- Font size = 1, bold font weight -->
+                <p class="fs-1 fw-bold">MINIMALIST SUBSTITUTION AND TRANSPOSITION CIPHER</p>
+
+                <br>
+                <br>
+
+                <!-- Image fluid, x-small screen col width = 12/12, small screen col width = 10/12, 
+                medium screen col width = 8/12, large screen col width = 6/12, padding = 3 -->
+                <img id="symCipherImg" class="img-fluid col-12 col-sm-10 col-md-8 col-lg-6 p-3" src="symmetric_cipher.png" alt="Symmetric cipher">
+            </header>
 
             <br>
             <br>
 
-            <div id="instructions">
-                <h3>CIPHER INSTRUCTIONS</h3>
+            <article>
+                <div id="instructions">
+                    <!-- Font size = 4, and bold font weight -->
+                    <p class="fs-4 fw-bold">CIPHER INSTRUCTIONS</p>
+                    <p>The library cannot contain the same character more than once;<br>
+                        The library must contain at least 2 characters, up to a maximum of 256 characters;<br>
+                        The input message and the two keys can only contain characters from the library;<br>
+                        The two keys must not be longer than the input message;<br>
+                        If your message and the keys are not a multiple of the length of the library, then additionnal characters will be added at the end;<br>
+                        If you choose to complete your keys using pseudorandom characters, then you may leave the input blank, or choose a seed from 0 to 65536.</p>
+                        <br>
+                </div>
+
+                <div>
+                    <!-- Bootstrap button, large button, add the class fs-inherit, and the class btn-custom-gold -->
+                    <button id="instrubtn" class="btn btn-lg btn-custom-gold fs-inherit" type="button">Show/hide instructions</button>    
+                </div>
+
+                <br>
+                <br>
+
+                <div class="">
+                    <fieldset id="colorTheme">
+
+                        <div>
+                            <!-- Add the class fs-inherit -->
+                            <legend class="fs-inherit">Select a theme</legend>
+                        </div>
+
+                        <br>
+                        <br>
+                        
+                        <!-- If screen size is larger than small, flex (column). If the screen size is small or smaller, flex (row).
+                        Space the elements evenly on the main axis, and center them on the secondary axis. Margin = auto. x-small screen
+                        col width = 12/12, small screen col width = 9/12, medium screen col width = 6/12, large screen col width = 3/12 -->
+                        <div class="d-flex flex-column flex-sm-row justify-content-evenly align-items-center m-auto col-12 col-sm-9 col-md-6 col-lg-3">
+                            <div>
+                                <label for="lightTheme">Light theme</label>
+                                <input type="radio" id="lightTheme" value="light" name="theme" checked>
+                            </div>
+
+                            <div>
+                                <label for="darkTheme">Dark theme</label>
+                                <input type="radio" id="darkTheme" value="dark" name="theme">
+                            </div>
+                        </div>
+
+                    </fieldset>
+                </div>
+            
+                <br>
+                <br>
+
+                <label>Input message</label>
+                <div>
+                    <!-- Add the class field, the class fs-inherit, and the class field-sizing-content. x-small screen col width = 12/12,
+                    small screen col width = 8/12, medium screen col width = 6/12, large screen col width = 4/12 -->
+                    <textarea id="input" class="field fs-inherit field-sizing-content col-12 col-sm-8 col-md-6 col-lg-4"></textarea>
+                    <p id="inputP"></p>
+                </div>
 
                 <br>
 
-                <p>The library cannot contain the same character more than once;<br>
-                    The library must contain at least 2 characters, up to a maximum of 256 characters;<br>
-                    The input message and the two keys can only contain characters from the library;<br>
-                    The two keys must not be longer than the input message;<br>
-                    If your message and the keys are not a multiple of the length of the library, then additionnal characters will be added at the end;<br>
-                    If you choose to complete your keys using pseudorandom characters, then you may leave the input blank, or choose a seed from 0 to 65536.</p>
-                    <br>
-            </div>
-
-            <div>
-                <button id="instrubtn" type="button">Show/hide instructions</button>    
-            </div>
-           
-            <br>
-            <br>
-
-            <label>Input message</label>
-            <div>
-                <textarea id="input" class="field"></textarea>
-                <p id="inputP"></p>
-            </div>
-
-
-            <br>
-
-            <label>Library</label>
-            <div>
-                <textarea id="library" type="text"></textarea>
-                <p id="libraryP"></p>
-            </div>
-
-
-            <br>
-
-            <label>Substitution key</label>
-            <div>
-                <textarea id="keySub" class="field"></textarea>
-                <p id="keySubP"></p>
-            </div>
-
-
-
-            <br>
-
-            <label>Transposition key</label>
-            <div>
-                <textarea id="keyTra" class="field"></textarea>
-                <p id="keyTraP"></p>
-            </div>
-    
-
-            <br>
-            <br>
-
-            <div class="divKeysNButtons">
+                <label>Library</label>
                 <div>
-                    <p>Define the PRNG and seed values, or leave blank to generate values automatically</p>
-                    <br>
+                    <!-- Add the class fs-inherit, and the class field-sizing-content. x-small screen col width = 12/12,
+                    small screen col width = 8/12, medium screen col width = 6/12, large screen col width = 4/12 -->
+                    <textarea id="library" class="fs-inherit field-sizing-content col-12 col-sm-8 col-md-6 col-lg-4" type="text"></textarea>
+                    <p id="libraryP"></p>
                 </div>
-                    
-                <div class="divSeeds">
-                    <div class="flexSeed">
-                        <div>
-                            <label for="prngSub">PRNG for substitution key</label>
-                            <br>
-                            <input type="number" id="prngSub" class="otherField" placeholder="Select PRNG: 1-4" min="1" max="4">
-                        </div>
 
-                        <div>
-                            <label for="seedSub">Select a seed value</label>
-                            <br>
-                            <input type="number" id="seedSub" class="otherField" placeholder="Select seed value: 0-65536" min="0" max="65536">
-                        </div>
-                    </div>
+                <br>
 
-                   <div class="flexSeed">
-                        <div>
-                            <label for="prngTra">PRNG for transposition key</label>
-                            <br>
-                            <input type="number" id="prngTra" class="otherField" placeholder="Select PRNG: 1-4" min="1" max="4">
-                        </div>
-
-                        <div>
-                            <label for="seedTra">Select a seed value</label>
-                            <br>
-                            <input type="number" id="seedTra" class="otherField" placeholder="Select seed value: 0-65536" min="0" max="65536">
-                        </div>
-                    </div>
+                <label>Substitution key</label>
+                <div>
+                    <!-- Add the class field, the class fs-inherit, and the class field-sizing-content. x-small screen col width = 12/12,
+                    small screen col width = 8/12, medium screen col width = 6/12, large screen col width = 4/12 -->
+                    <textarea id="keySub" class="field fs-inherit field-sizing-content col-12 col-sm-8 col-md-6 col-lg-4"></textarea>
+                    <p id="keySubP"></p>
                 </div>
-            </div>
 
-            <br>
-            <br>
+                <br>
 
-            <div class="divKeysNButtons">
-                <div class="flexButtons">
-                    <button id="encode" type="button">Encode</button>
+                <label>Transposition key</label>
+                <div>
+                    <!-- Add the class field, the class fs-inherit, and the class field-sizing-content. x-small screen col width = 12/12,
+                    small screen col width = 8/12, medium screen col width = 6/12, large screen col width = 4/12 -->
+                    <textarea id="keyTra" class="field fs-inherit field-sizing-content col-12 col-sm-8 col-md-6 col-lg-4"></textarea>
+                    <p id="keyTraP"></p>
+                </div>
 
+                <br>
+                <br>
+
+                <!-- Add flex (column) -->
+                <div class="d-flex flex-column">
                     <div>
+                        <p>Define the PRNG and seed values, or leave them blank to generate values automatically</p>
+                        <br>
+                    </div>
+                    
+                    <!-- If screen size is larger than small, flex (column). If the screen size is small or smaller, flex (row).
+                    Space the elements evenly on the main axis, and center them on the secondary axis. Margin = auto. x-small screen
+                    col width = 12/12, small screen col width = 10/12, medium screen col width = 8/12, large screen col width = 6/12 -->
+                    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center m-auto col-12 col-sm-10 col-md-8 col-lg-6">
+                        <!-- Padding = 2 -->
+                        <div class="p-2">
+                            <!-- Padding = 2 -->
+                            <div class="p-2">
+                                <label for="prngSub">PRNG for substitution key</label>
+                                <br>
+                                <!-- Add the class otherField, the class fs-inherit, and fix width at 100% of parent element -->
+                                <input type="number" id="prngSub" class="otherField fs-inherit w-100" placeholder="From 1 to 4" min="1" max="4">
+                            </div>
+
+                            <!-- Padding = 2 -->
+                            <div class="p-2">
+                                <label for="seedSub">Select a seed value</label>
+                                <br>
+                                <!-- Add the class otherField, the class fs-inherit, and fix width at 100% of parent element -->
+                                <input type="number" id="seedSub" class="otherField fs-inherit w-100" placeholder="From 0 to 65536" min="0" max="65536">
+                            </div>
+                        </div>
+
+                        <!-- Padding = 2 -->
+                        <div class="p-2">
+                            <!-- Padding = 2 -->
+                            <div class="p-2">
+                                <label for="prngTra">PRNG for transposition key</label>
+                                <br>
+                                <!-- Add the class otherField, the class fs-inherit, and fix width at 100% of parent element -->
+                                <input type="number" id="prngTra" class="otherField fs-inherit w-100" placeholder="From 1 to 4" min="1" max="4">
+                            </div>
+
+                            <!-- Padding = 2 -->
+                            <div class="p-2">
+                                <label for="seedTra">Select a seed value</label>
+                                <br>
+                                <!-- Add the class otherField, the class fs-inherit, and fix width at 100% of parent element -->
+                                <input type="number" id="seedTra" class="otherField fs-inherit w-100" placeholder="From 0 to 65536" min="0" max="65536">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <br>
+                <br>
+
+                <!-- If screen size is larger than small, flex (column). If the screen size is small or smaller, flex (row).
+                    Space the elements evenly on the main axis, and center them on the secondary axis. Margin = auto. x-small screen
+                    col width = 12/12, small screen col width = 10/12, medium screen col width = 8/12, large screen col width = 6/12. Padding = 2 -->
+                <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center m-auto col-12 col-sm-10 col-md-8 col-lg-6 p-2">
+                    <!-- Adapt column width to content automatically. Padding = 2 -->
+                    <div class="col-auto p-2">
+                        <!-- Bootstrap button, large button, add the class fs-inherit, and the class btn-custom-gold -->
+                        <button id="encode" class="btn btn-custom-gold btn-lgfs-inherit" type="button">Encode</button>
+                    </div>
+                        
+                    <!-- Adapt column width to content automatically. Padding = 2 -->
+                    <div class="col-auto p-2">
+                        <br>
                         <label for="mode">Type of encryption/decryption</label>
                         <br>
+                        <!-- Add class otherField -->
                         <input type="range" id="mode" class="otherField" min="-1" max="1" step="1" value="0">
                         <p id="modeP"></p>
                     </div>
 
-                    <button id="decode" type="button">Decode</button>
+                    <!-- Adapt column width to content automatically. Padding = 2 -->
+                    <div class="col-auto p-2">
+                        <!-- Bootstrap button, large button, add the class fs-inherit, and the class btn-custom-gold -->
+                        <button id="decode" class="btn btn-custom-gold btn-lgfs-inherit" type="button">Decode</button>
+                    </div>
                 </div>
-            </div>
 
-            <br>
+                <br>
 
-            <label for="output">Output message</label>
-            <div>
-                <textarea id="output" class="otherField" readonly></textarea>
-            </div>
+                <label for="output">Output message</label>
+                <div>
+                    <!-- Add the class otherField, the class fs-inherit, and the class field-sizing-content. x-small screen col width = 12/12,
+                    small screen col width = 8/12, medium screen col width = 6/12, large screen col width = 4/12 -->
+                    <textarea id="output" class="otherField fs-inherit field-sizing-content col-12 col-sm-8 col-md-6 col-lg-4" readonly></textarea>
+                </div>
 
-            <br>
-            
-            <div>
-                <button id="reset" type="button">Reset fields</button>
-            </div>
+                <br>
+                
+                <div>
+                    <!-- Bootstrap button, large button, add the class fs-inherit, and the class btn-custom-gold -->
+                    <button id="reset" class="btn btn-custom-gold btn-lg fs-inherit" type="button">Reset fields</button>
+                </div>
+
+                <br>
+                <br>
+            </article>
+
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
 </body>
 </html>
