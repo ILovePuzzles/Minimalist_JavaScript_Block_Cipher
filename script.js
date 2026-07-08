@@ -126,10 +126,10 @@ function convert(encode) {
         const elementKeyTra = document.getElementById("keyTra")
 
         // Validate then set the properties for the object "infosEmpty"
-        const infosLibrary = setLibrary(elementLibrary.value, infosEmpty)
-        const infosMsg = validate(elementInput, infosLibrary, "msg")
-        const infosKey1 = validate(elementKeySub, infosMsg, "keySub")
-        const infosKey2 = validate(elementKeyTra, infosKey1, "keyTra")
+        const infosLibrary = setLibrary(elementLibrary.value.toString(), infosEmpty)
+        const infosMsg = validate(elementInput.value.toString(), infosLibrary, "msg")
+        const infosKey1 = validate(elementKeySub.value.toString(), infosMsg, "keySub")
+        const infosKey2 = validate(elementKeyTra.value.toString(), infosKey1, "keyTra")
 
         // If no error has been thrown, update the HTML elements, then encode or decode the message using the keys
         elementInput.value = infosKey2.msg.toString()
@@ -187,12 +187,61 @@ function setLibrary(library, infos) {
 
 // Method that validates the input message and the 2 keys
 // If a string are valid but too short, the method expands the string
-function validate(element, infos, contentID) {
-    value = element.value
-    const valueLength = value.length
-
+function validate(value, infos, contentID) {
     // If the element is one of the keys
-    if (contentID != "msg") {
+    if (contentID != "msg") { return validateKey(value, value.length, infos, contentID) }
+
+    // If the element is the message
+    else { return validateMsg(value, value.length, infos) }
+
+
+
+
+
+    // Method that validates the message value
+    function validateMsg(value, valueLength, infos) {
+        // If the message is made of characters from the library
+        if (validateCharacterContent(value, valueLength, infos.library)) {
+            // If the message length is valid
+            // NOTE: the maximal length of the message has been set to 65536 since the period of the PRNG is exactly 65537,
+            // the message must be a multiple of the library length and 65537 is a prime number. The closest composite
+            // number below 65537 is 65536 = 2^16 = 256^2, which is equal to the maximal library length squared.
+            if (valueLength > 0 && valueLength < 65537) {
+                // If the message length is not equal to the library length nor a multiple of it,
+                // expand the message by adding copies of the same pseudorandom character at the end
+                if (valueLength % infos.libraryLength != 0) {
+                    const rndPRNGValue = Math.floor(Math.random() * 4) + 1
+                    const rndSeedValue = BigInt(Math.floor(Math.random() * 65537))
+                    // Generate a list with one pseudorandom value
+                    const numberList = inversiveCongruentialGenerator(1, infos.libraryLength, rndPRNGValue, rndSeedValue, true);
+
+                    // Expand the message with a padding character until the message length is valid, using the
+                    // pseudorandom number list as an index value for the library
+                    for (let i = valueLength; i < valueLength + infos.libraryLength - valueLength % infos.libraryLength; i++) {
+                        value += infos.library[numberList[0]].toString()
+                    }
+                }
+
+                // Update the properties of the object "infos"
+                infos.msg = value.toString()
+                infos.msgLength = infos.msg.length
+
+                return infos
+            }
+
+            // If the message is empty, throw an error
+            else if (valueLength == 0) { throw new Error("the message cannot be empty.") }
+ 
+            // If the message is larger than the square of the library length, throw an error
+            else { throw new Error("the message cannot be more than 65536 characters long.") }
+        }
+
+        // If the message contains characters that are not in the library, throw an error
+        else { throw new Error("the message must contain characters from the library only.") }
+    }
+
+    // Method that validates the key value
+    function validateKey(value, valueLength, infos, contentID) {
         // Define a specific error message
         let errorMsg = (contentID == "keySub" ? "substitution" : "transposition")
 
@@ -214,7 +263,7 @@ function validate(element, infos, contentID) {
         }
 
         // If the key is made of characters from the library
-        else if (validateCharactersContent(value, valueLength, infos.library)) {
+        else if (validateCharacterContent(value, valueLength, infos.library)) {
             // If the key is smaller than the message
             if (valueLength < infos.msgLength) {
                 let numberList
@@ -257,50 +306,8 @@ function validate(element, infos, contentID) {
         else { throw new Error("the " + errorMsg + " key must contain characters from the library only.") }
     }
 
-    // If the element is the message
-    else {
-        // If the message is made of characters from the library
-        if (validateCharactersContent(value, valueLength, infos.library)) {
-            // If the message length is valid
-            // NOTE: the maximal length of the message has been set to 65536 since the period of the PRNG is exactly 65537,
-            // the message must be a multiple of the library length and 65537 is a prime number. The closest composite
-            // number below 65537 is 65536 = 2^16 = 256^2, which is equal to the maximal library length squared.
-            if (valueLength > 0 && valueLength < 65537) {
-                // If the message length is not equal to the library length nor a multiple of it,
-                // expand the message by adding copies of the same pseudorandom character at the end
-                if (valueLength % infos.libraryLength != 0) {
-                    // Generate a list with one pseudorandom value
-                    const numberList = inversiveCongruentialGenerator(1, infos.libraryLength, Math.floor(Math.random() * 4) + 1, BigInt(Math.floor(Math.random() * 65537)), true);
-
-                    // Expand the message with a padding character until the message length is valid, using the
-                    // pseudorandom number list as an index value for the library
-                    for (let i = valueLength; i < valueLength + infos.libraryLength - valueLength % infos.libraryLength; i++) {
-                        value += infos.library[numberList[0]].toString()
-                    }
-                }
-
-                // Update the properties of the object "infos"
-                infos.msg = value.toString()
-                infos.msgLength = infos.msg.length
-
-                return infos
-            }
-
-            // If the message is empty, throw an error
-            else if (valueLength == 0) { throw new Error("the message cannot be empty.") }
- 
-            // If the message is larger than the square of the library length, throw an error
-            else { throw new Error("the message cannot be more than 65536 characters long.") }
-        }
-
-        // If the message contains characters that are not in the library, throw an error
-        else { throw new Error("the message must contain characters from the library only.") }
-    }
-
-
-
     // Method that validates that the provided string value contains characters from the library only
-    function validateCharactersContent(value, valueLength, library) {
+    function validateCharacterContent(value, valueLength, library) {
         // If the value contains a character that is not in the library, then the value is not valid
         for (let i = 0; i < valueLength; i++) {
             if (!library.includes(value[i].toString())) { return false }
