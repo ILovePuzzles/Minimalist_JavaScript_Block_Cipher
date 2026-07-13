@@ -76,10 +76,20 @@ document.getElementById("mode").onclick = function() { updateHTML(elementMode) }
 
 
 // Method that updates the HTML
-function updateHTML(element) {
+function updateHTML(element, time) {
     // If the element is not the encryption/decryption mode selector, update character count
     if (element.id != "mode") {
         document.querySelector(`#${element.id}P`).textContent = `Character count: ${element.value.length}`
+
+        if (element.id == "output") {
+            if (time != -1) {
+                document.querySelector(`#${element.id}P`).textContent = `Time elapsed: ${time} seconds`
+            }
+
+            else {
+                document.querySelector(`#${element.id}P`).textContent = ``
+            }
+        }
     }
 
     // If the element is the encryption/decryption mode selector, update the text value. Also, if mode != 0,
@@ -120,6 +130,8 @@ function reset() {
     // For each element with the "otherField" class, reset the values
         document.querySelectorAll(".otherField").forEach(element => {
         element.value = ""
+
+        if (element.id == "output") { document.querySelector(`#${element.id}P`).textContent = `` }
     })
 
     // Reload the default library
@@ -145,6 +157,8 @@ function instruct() {
 
 // Method that allows to encode or decode a message
 async function convert(encode) {
+    const start = performance.now()
+
     try {
         elementOutput.classList.remove('error')
 
@@ -201,6 +215,9 @@ async function convert(encode) {
         // Update "elementOutput" HTML value and CSS style
         elementOutput.value = infosResult.result.toString()
         elementOutput.focus()
+        const end = performance.now()
+        const elapsedSeconds = (end - start) / 1000
+        updateHTML(elementOutput, elapsedSeconds.toFixed(2))
     }
 
     catch (error) {
@@ -209,6 +226,7 @@ async function convert(encode) {
         elementOutput.classList.add('error')
         elementOutput.style.color = 'red'
         elementOutput.focus()
+        updateHTML(elementOutput, -1)
     }
 }
 
@@ -238,10 +256,10 @@ function setLibrary(infos) {
 // If a string are valid but too short, the method expands the string
 async function validate(infos) {
     const infosMsg = validateMsg(infos)
-    const infosSeedSub = await validateKeyAndSalt(infos, "substitution")
-    const infosSeedTra = await validateKeyAndSalt(infos, "transposition")
+    const infosKeySub = await validateKeyAndSalt(infosMsg, "substitution")
+    const infosKeyTra = await validateKeyAndSalt(infosKeySub, "transposition")
 
-    return infosSeedTra
+    return infosKeyTra
 
 
 
