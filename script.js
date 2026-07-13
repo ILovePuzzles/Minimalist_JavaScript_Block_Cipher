@@ -27,8 +27,18 @@ document.getElementById("colorTheme").addEventListener('change', (event) => {
             body.className = ''
             body.classList.add('dark-theme')
             document.querySelectorAll('textarea, input').forEach(element => {
-                element.classList.remove('light-theme')
-                element.classList.add('dark-theme')
+                if (element.id != "output") {
+                    element.classList.remove('light-theme')
+                    element.classList.add('dark-theme')
+                }
+
+                else {
+                    element.style.backgroundColor = 'black'
+
+                    if (!element.classList.contains('error')) {
+                        element.style.color = 'white'
+                    }
+                }
             })
         }
 
@@ -36,8 +46,18 @@ document.getElementById("colorTheme").addEventListener('change', (event) => {
             body.className = ''
             body.classList.add('light-theme')
             document.querySelectorAll('textarea, input').forEach(element => {
-                element.classList.remove('dark-theme')
-                element.classList.add('light-theme')
+                if (element.id != "output") {
+                    element.classList.remove('dark-theme')
+                    element.classList.add('light-theme')
+                }
+
+                else {
+                    element.style.backgroundColor = 'white'
+
+                    if (!element.classList.contains('error')) {
+                        element.style.color = 'black'
+                    }
+                }
             })
         }
     }
@@ -111,9 +131,15 @@ function reset() {
     // Actualize the text below elementMode (actual mode description)
     updateHTML(elementMode)
     // Actualize the CSS for elementOutput
-    elementOutput.style.color = 'black'
-    elementOutput.style.fontWeight = 'normal'
-    elementOutput.style.borderColor = 'rgba(212, 175, 55, 1)'
+    elementOutput.classList.remove('error')
+
+    if (document.body.classList.contains('light-theme')) {
+        elementOutput.style.color = 'black'
+    }
+
+    else {
+        elementOutput.style.color = 'white'
+    }
 }
 
 // Method that shows/hides instructions
@@ -124,6 +150,18 @@ function instruct() {
 // Method that allows to encode or decode a message
 async function convert(encode) {
     try {
+        elementOutput.classList.remove('error')
+
+        if (document.body.classList.contains('light-theme')) {
+            elementOutput.style.color = 'black'
+        }
+
+        else {
+            elementOutput.style.color = 'white'
+        }
+
+        elementOutput.value = "Conversion in progress"
+
         // Isolate important HTML elements based on their ID value
         const elementMsg = document.getElementById("input")
         const elementSeedSub = document.getElementById("seedSub")
@@ -170,18 +208,14 @@ async function convert(encode) {
 
         // Update "elementOutput" HTML value and CSS style
         elementOutput.value = infosResult.result.toString()
-        elementOutput.style.color = 'black'
-        elementOutput.style.fontWeight = 'normal'
-        elementOutput.style.borderColor = 'rgba(212, 175, 55, 1)'
         elementOutput.focus()
     }
 
     catch (error) {
         // Update "elementOutput" HTML value and CSS style
         elementOutput.value = error
+        elementOutput.classList.add('error')
         elementOutput.style.color = 'red'
-        elementOutput.style.fontWeight = 'bold'
-        elementOutput.style.borderColor = 'red'
         elementOutput.focus()
     }
 }
@@ -309,10 +343,35 @@ async function validate(infos) {
             if (valueKeyLength == 0 || valueSaltLength == 0) {
                 throw new Error("the " + contentID + " key and salt must contain at least one character.") }
 
-            let combinedValue = await deriveSeededKey(valueKey, valueSalt)
+            let combinedValue
+            let key = ""
 
-            contentID == "substitution" ? infos.keySub = generateStringfromArray(combinedValue, infos) : 
-                infos.keySub = generateStringfromArray(combinedValue, infos)
+            for (let i = 0; key.length < infos.msgLength; i++) {
+                // If the message is longer than the library, use an element of the array combinedValue to generate new keys
+                if (i > 0) {
+                    // Get a value from the array combinedValue using the value i as an index, modulo the library length
+                    let startValue = combinedValue[i - 1] % infos.libraryLength
+                    // Add the library content under a circular rotation as a string to valueKey
+                    valueKey += infos.library.substring(startValue, infos.libraryLength).toString() +
+                        infos.library.substring(0, startValue).toString()
+                    // Get a value from the array combinedValue using the value i + 256, modulo the library
+                    // length. The index value has a potential maximum of 255, since this is the maximum valid range
+                    // for the last index of the library. Since the array combinedValue has 512 elements in total, by
+                    // adding 256 to the value of i we are making sure that our selection has a different index than
+                    // the above selection
+                    startValue = combinedValue[i - 1 + 256] % infos.libraryLength
+                    // Generate a string from the library content under a circular rotation
+                    let tempString = infos.library.substring(startValue, infos.libraryLength).toString() +
+                        infos.library.substring(0, startValue).toString()
+                    // Reverse the order of the string's characters, then add the resulting string to valueSalt
+                    valueSalt += tempString.split('').reverse().join('')
+                }
+
+                combinedValue = await deriveSeededKey(valueKey, valueSalt)
+                key += generateStringfromArray(combinedValue, infos)
+            }
+
+            contentID == "substitution" ? infos.keySub = key : infos.keyTra = key
 
             return infos
         }
@@ -378,11 +437,11 @@ async function validate(infos) {
     function generateStringfromArray(combinedValue, infos) {
         let charString = ""
 
-        for (let i = 0; i < 2 * infos.libraryLength; i++) {
-            const bytes = new Uint8Array([combinedValue[i], combinedValue[++i]])
+        for (let i = 0; i < 2 * infos.libraryLength; i += 2) {
+            const bytes = new Uint8Array([combinedValue[i], combinedValue[i + 1]])
             const view = new DataView(bytes.buffer)
 
-            // Read as 32-bit Little-Endian
+            // Read as 16-bit Little-Endian
             let index = view.getUint16(0, true) % infos.libraryLength
             charString += infos.library[index]
         }
@@ -437,8 +496,7 @@ function crypt(infos) {
         while (++counter * infos.libraryLength < infos.msgLength) {
             // Split the input message and substitution key into substrings of the length of the library
             partialMsg = Array.from(infos.result.toString().substring(counter * infos.libraryLength, (counter + 1) * infos.libraryLength))
-            partialKey = Array.from(infos.keySub.toString())
-            // partialKey = Array.from(infos.keySub.toString().substring(counter * infos.libraryLength, (counter + 1) * infos.libraryLength))
+            partialKey = Array.from(infos.keySub.toString().substring(counter * infos.libraryLength, (counter + 1) * infos.libraryLength))
 
             for (let i = 0; i < infos.libraryLength; i++) {
                 // Find actual symbol index value
@@ -472,8 +530,7 @@ function crypt(infos) {
         while (++counter * infos.libraryLength < infos.msgLength) {
             // Split the input message and transposition key into substrings of the length of the library
             partialMsg = Array.from(infos.result.toString().substring(counter * infos.libraryLength, (counter + 1) * infos.libraryLength))
-            partialKey = Array.from(infos.keySub.toString())
-            // partialKey = Array.from(infos.keySub.toString().substring(counter * infos.libraryLength, (counter + 1) * infos.libraryLength))
+            partialKey = Array.from(infos.keyTra.toString().substring(counter * infos.libraryLength, (counter + 1) * infos.libraryLength))
 
             for (initPos = start; initPos != end; initPos += step) {
                 // Find transposition displacement value using key
