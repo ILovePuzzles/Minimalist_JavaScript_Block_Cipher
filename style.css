@@ -61,6 +61,10 @@ textarea {
     color: #fff;
 }
 
+.error {
+    font-weight: bold;
+}
+
 .light-theme {
     background-color: #fff;
     color: #000;  
