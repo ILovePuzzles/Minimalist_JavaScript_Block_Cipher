@@ -27,6 +27,8 @@ input[type="radio"]:hover {
 textarea {
     text-align: center;
     align-content: center;
+    field-sizing: content;
+    resize: none; 
     min-height: 2lh;
     max-height: 6lh;
     color: #000;
