@@ -38,12 +38,12 @@
                 <div id="instructions">
                     <!-- Font size = 4, and bold font weight -->
                     <p class="fs-4 fw-bold">CIPHER INSTRUCTIONS</p>
-                    <p>The library cannot contain the same character more than once;<br>
+                    <p>The library must be made from unique characters, each character cannot appear more than once;<br>
                         The library must contain at least 2 characters, up to a maximum of 256 characters;<br>
                         The input message and the two keys can only contain characters from the library;<br>
-                        The two keys must not be longer than the input message;<br>
-                        If your message and the keys are not a multiple of the length of the library, then additionnal characters will be added at the end;<br>
-                        If you choose to complete your keys using pseudorandom characters, then you may leave the input blank, or choose a seed from 0 to 65536.</p>
+                        The message, the keys and the salt cannot be empty;<br>
+                        If your message is not a multiple of the length of the library, then an additionnal character
+                        will be added at the end to complete the message.</p>
                         <br>
                 </div>
 
@@ -111,8 +111,18 @@
                 <div>
                     <!-- Add the class field, the class fs-inherit, and the class field-sizing-content. x-small screen col width = 12/12,
                     small screen col width = 8/12, medium screen col width = 6/12, large screen col width = 4/12 -->
-                    <textarea id="keySub" class="field fs-inherit field-sizing-content col-12 col-sm-8 col-md-6 col-lg-4"></textarea>
-                    <p id="keySubP"></p>
+                    <textarea id="seedSub" class="field fs-inherit field-sizing-content col-12 col-sm-8 col-md-6 col-lg-4"></textarea>
+                    <p id="seedSubP"></p>
+                </div>
+
+                <br>
+
+                <label>Substitution salt</label>
+                <div>
+                    <!-- Add the class field, the class fs-inherit, and the class field-sizing-content. x-small screen col width = 12/12,
+                    small screen col width = 8/12, medium screen col width = 6/12, large screen col width = 4/12 -->
+                    <textarea id="saltSub" class="field fs-inherit field-sizing-content col-12 col-sm-8 col-md-6 col-lg-4"></textarea>
+                    <p id="saltSubP"></p>
                 </div>
 
                 <br>
@@ -121,64 +131,20 @@
                 <div>
                     <!-- Add the class field, the class fs-inherit, and the class field-sizing-content. x-small screen col width = 12/12,
                     small screen col width = 8/12, medium screen col width = 6/12, large screen col width = 4/12 -->
-                    <textarea id="keyTra" class="field fs-inherit field-sizing-content col-12 col-sm-8 col-md-6 col-lg-4"></textarea>
-                    <p id="keyTraP"></p>
+                    <textarea id="seedTra" class="field fs-inherit field-sizing-content col-12 col-sm-8 col-md-6 col-lg-4"></textarea>
+                    <p id="seedTraP"></p>
                 </div>
 
                 <br>
-                <br>
 
-                <!-- Add flex (column) -->
-                <div class="d-flex flex-column">
-                    <div>
-                        <p>Define the PRNG and seed values, or leave them blank to generate values automatically</p>
-                        <br>
-                    </div>
-                    
-                    <!-- If screen size is larger than small, flex (column). If the screen size is small or smaller, flex (row).
-                    Space the elements evenly on the main axis, and center them on the secondary axis. Margin = auto. x-small screen
-                    col width = 12/12, small screen col width = 10/12, medium screen col width = 8/12, large screen col width = 6/12 -->
-                    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center m-auto col-12 col-sm-10 col-md-8 col-lg-6">
-                        <!-- Padding = 2 -->
-                        <div class="p-2">
-                            <!-- Padding = 2 -->
-                            <div class="p-2">
-                                <label for="prngSub">PRNG for substitution key</label>
-                                <br>
-                                <!-- Add the class otherField, the class fs-inherit, and fix width at 100% of parent element -->
-                                <input type="number" id="prngSub" class="otherField fs-inherit w-100" placeholder="From 1 to 4" min="1" max="4">
-                            </div>
-
-                            <!-- Padding = 2 -->
-                            <div class="p-2">
-                                <label for="seedSub">Select a seed value</label>
-                                <br>
-                                <!-- Add the class otherField, the class fs-inherit, and fix width at 100% of parent element -->
-                                <input type="number" id="seedSub" class="otherField fs-inherit w-100" placeholder="From 0 to 65536" min="0" max="65536">
-                            </div>
-                        </div>
-
-                        <!-- Padding = 2 -->
-                        <div class="p-2">
-                            <!-- Padding = 2 -->
-                            <div class="p-2">
-                                <label for="prngTra">PRNG for transposition key</label>
-                                <br>
-                                <!-- Add the class otherField, the class fs-inherit, and fix width at 100% of parent element -->
-                                <input type="number" id="prngTra" class="otherField fs-inherit w-100" placeholder="From 1 to 4" min="1" max="4">
-                            </div>
-
-                            <!-- Padding = 2 -->
-                            <div class="p-2">
-                                <label for="seedTra">Select a seed value</label>
-                                <br>
-                                <!-- Add the class otherField, the class fs-inherit, and fix width at 100% of parent element -->
-                                <input type="number" id="seedTra" class="otherField fs-inherit w-100" placeholder="From 0 to 65536" min="0" max="65536">
-                            </div>
-                        </div>
-                    </div>
+                <label>Transposition salt</label>
+                <div>
+                    <!-- Add the class field, the class fs-inherit, and the class field-sizing-content. x-small screen col width = 12/12,
+                    small screen col width = 8/12, medium screen col width = 6/12, large screen col width = 4/12 -->
+                    <textarea id="saltTra" class="field fs-inherit field-sizing-content col-12 col-sm-8 col-md-6 col-lg-4"></textarea>
+                    <p id="saltTraP"></p>
                 </div>
-
+                
                 <br>
                 <br>
 
