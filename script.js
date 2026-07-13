@@ -65,24 +65,24 @@ function updateHTML(element) {
     // If the element is the encryption/decryption mode selector, update the text value. Also, if mode != 0,
     // make the unused textarea element readonly
     else {
-        let keySub = document.getElementById("keySub")
-        let keyTra = document.getElementById("keyTra")
-        keySub.readOnly = false
-        keyTra.readOnly = false
+        let seedSub = document.getElementById("seedSub")
+        let seedTra = document.getElementById("seedTra")
+        seedSub.readOnly = false
+        seedTra.readOnly = false
 
         let text
 
         switch (Number(element.value)) {
             case -1:
                 text = "Substitution only mode"
-                keyTra.readOnly = true
+                seedTra.readOnly = true
                 break
             case 0:
                 text = "Transposition and substitution mode"
                 break
             case 1:
                 text = "Transposition only mode"
-                keySub.readOnly = true
+                seedSub.readOnly = true
                 break
         }
 
@@ -122,51 +122,51 @@ function instruct() {
 }
 
 // Method that allows to encode or decode a message
-function convert(encode) {
+async function convert(encode) {
     try {
+        // Isolate important HTML elements based on their ID value
+        const elementMsg = document.getElementById("input")
+        const elementSeedSub = document.getElementById("seedSub")
+        const elementSaltSub = document.getElementById("saltSub")
+        const elementSeedTra = document.getElementById("seedTra")
+        const elementSaltTra = document.getElementById("saltTra")
+
         // Create an object to store the values
         // NOTE: the seed and its related values must be casted as a BigInt data type, otherwise the
         // multiplicativeInverse method will not work properly
         const infosEmpty = {
-            library: "",
+            library: elementLibrary.value.toString(),
             libraryLength: 0,
-            msg: "",
+            msg: elementMsg.value.toString(),
             msgLength: 0,
-            prngSub: -1,
-            seedSub: -1n,
-            keySub: "",
-            prngTra: -1,
-            seedTra: -1n,
-            keyTra: "",
+            seedSub: elementSeedSub.value.toString(),
+            saltSub: elementSaltSub.value.toString(),
+            keySub: undefined,
+            seedTra: elementSeedTra.value.toString(),
+            saltTra: elementSaltTra.value.toString(),
+            keyTra: undefined,
             encode: encode,
             mode: Number(elementMode.value),
             result: ""
         }
 
-        // Isolate important HTML elements based on their ID value
-        const elementInput = document.getElementById("input")
-        const elementKeySub = document.getElementById("keySub")
-        const elementKeyTra = document.getElementById("keyTra")
-
         // Validate then set the properties for the object "infosEmpty"
-        const infosLibrary = setLibrary(elementLibrary.value.toString(), infosEmpty)
-        const infosMsg = validate(elementInput.value.toString(), infosLibrary, "msg")
-        const infosKey1 = validate(elementKeySub.value.toString(), infosMsg, "keySub")
-        const infosKey2 = validate(elementKeyTra.value.toString(), infosKey1, "keyTra")
+        const infosLibrary = setLibrary(infosEmpty)
+        const infosComplete = await validate(infosLibrary)
 
         // If no error has been thrown, update the HTML elements, then encode or decode the message using the keys
-        elementInput.value = infosKey2.msg.toString()
-        updateHTML(elementInput)
-        document.getElementById("prngSub").value = (infosKey2.prngSub != -1 ? infosKey2.prngSub : "")
-        document.getElementById("seedSub").value = (infosKey2.seedSub != -1n ? infosKey2.seedSub : "")
-        document.getElementById("prngTra").value = (infosKey2.prngTra != -1 ? infosKey2.prngTra : "")
-        document.getElementById("seedTra").value = (infosKey2.seedTra != -1n ? infosKey2.seedTra : "")
-        elementKeySub.value = infosKey2.keySub.toString()
-        updateHTML(elementKeySub)
-        elementKeyTra.value = infosKey2.keyTra.toString()
-        updateHTML(elementKeyTra)
+        elementMsg.value = infosComplete.msg.toString()
+        updateHTML(elementMsg)
+        elementSeedSub.value = infosComplete.seedSub.toString()
+        updateHTML(elementSeedSub)
+        elementSaltSub.value = infosComplete.saltSub.toString()
+        updateHTML(elementSaltSub)
+        elementSeedTra.value = infosComplete.seedTra.toString()
+        updateHTML(elementSeedTra)
+        elementSaltTra.value = infosComplete.saltTra.toString()
+        updateHTML(elementSaltTra)
 
-        const infosResult = crypt(infosKey2)
+        const infosResult = crypt(infosComplete)
 
         // Update "elementOutput" HTML value and CSS style
         elementOutput.value = infosResult.result.toString()
@@ -187,8 +187,8 @@ function convert(encode) {
 }
 
 // Method that validates the library
-function setLibrary(library, infos) {
-    infos.libraryLength = library.length
+function setLibrary(infos) {
+    infos.libraryLength = infos.library.length
 
     // If the library length is of valid length, continue by validating that each character is unique
     if (infos.libraryLength > 1 && infos.libraryLength < 257) {
@@ -196,12 +196,10 @@ function setLibrary(library, infos) {
 
         // If the library contains the same character twice, then the library is invalid
         for (let i = 0; i < infos.libraryLength - 1; i++) {
-            isInvalid = library.substring(i + 1).includes(library[i])
+            isInvalid = infos.library.substring(i + 1).includes(infos.library[i])
 
             if (isInvalid) { throw new Error("the library cannot contain the same character twice.") }
         }
-        
-        infos.library = library.toString()
 
         return infos
     }
@@ -210,21 +208,24 @@ function setLibrary(library, infos) {
     else { throw new Error("the library cannot be empty and cannot contain more than 256 characters.") }
 }
 
-// Method that validates the input message and the 2 keys
+// Method that validates the input message, the seeds and the keys
 // If a string are valid but too short, the method expands the string
-function validate(value, infos, contentID) {
-    // If the element is one of the keys
-    if (contentID != "msg") { return validateKey(value, value.length, infos, contentID) }
+async function validate(infos) {
+    const infosMsg = validateMsg(infos)
+    const infosSeedSub = await validateKeyAndSalt(infos, "substitution")
+    const infosSeedTra = await validateKeyAndSalt(infos, "transposition")
 
-    // If the element is the message
-    else { return validateMsg(value, value.length, infos) }
+    return infosSeedTra
 
 
 
 
 
     // Method that validates the message value
-    function validateMsg(value, valueLength, infos) {
+    function validateMsg(infos) {
+        value = infos.msg.toString()
+        valueLength = value.length
+
         // If the message is made of characters from the library
         if (validateCharacterContent(value, valueLength, infos.library)) {
             // If the message length is valid
@@ -235,15 +236,13 @@ function validate(value, infos, contentID) {
                 // If the message length is not equal to the library length nor a multiple of it,
                 // expand the message by adding copies of the same pseudorandom character at the end
                 if (valueLength % infos.libraryLength != 0) {
-                    const rndPRNGValue = Math.floor(Math.random() * 4) + 1
-                    const rndSeedValue = BigInt(Math.floor(Math.random() * 65537))
-                    // Generate a list with one pseudorandom value
-                    const numberList = inversiveCongruentialGenerator(1, infos.libraryLength, rndPRNGValue, rndSeedValue, true);
+                    // Generate a pseudorandom value
+                    const pseudorandomValue = Math.floor(Math.random() * 65537) % infos.libraryLength
 
                     // Expand the message with a padding character until the message length is valid, using the
-                    // pseudorandom number list as an index value for the library
+                    // pseudorandom number as an index value for the library
                     for (let i = valueLength; i < valueLength + infos.libraryLength - valueLength % infos.libraryLength; i++) {
-                        value += infos.library[numberList[0]].toString()
+                        value += infos.library[pseudorandomValue].toString()
                     }
                 }
 
@@ -265,70 +264,61 @@ function validate(value, infos, contentID) {
         else { throw new Error("the message must contain characters from the library only.") }
     }
 
-    // Method that validates the key value
-    function validateKey(value, valueLength, infos, contentID) {
-        // Define a specific error message
-        let errorMsg = (contentID == "keySub" ? "substitution" : "transposition")
+    // Method that validates the key and salt value
+    async function validateKeyAndSalt(infos, contentID) {
+        let valueKey
+        let valueKeyLength
+        let valueSalt
+        let valueSaltLength
+
+        if (contentID == "substitution") {
+            valueKey = infos.seedSub.toString()
+            valueKeyLength = valueKey.length
+            valueSalt = infos.saltSub.toString()
+            valueSaltLength = valueSalt.length
+        }
+
+        else {
+            valueKey = infos.seedTra.toString()
+            valueKeyLength = valueKey.length
+            valueSalt = infos.saltTra.toString()
+            valueSaltLength = valueSalt.length
+        }
 
         // If the mode of encryption/decryption is not substitution and transposition combined (mode != 0)
-        // If infos.mode == -1 -> substitution only, then fill keyTra with zeros
-        // If infos.mode == 1 -> transposition only, then fill keySub with zeros
-        if ((infos.mode == -1 && contentID == "keyTra") || (infos.mode == 1 && contentID == "keySub")) {
-            let text = ""
-
-            // Generate a string of zeros
-            for (let i = 0; i < infos.msgLength; i++) {
-                text += "0".toString()
+        // If infos.mode == -1 -> substitution only, then fill seedTra and saltTra with zeros
+        // If infos.mode == 1 -> transposition only, then fill seedSub and saltSub with zeros
+        if ((contentID == "transposition" && infos.mode == -1) || (contentID == "substitution" && infos.mode == 1)) {
+            // Update the object "infos" properties depending on which properties are under consideration
+            if (contentID == "transposition" && infos.mode == -1) {
+                infos.seedTra = ""
+                infos.saltTra = ""
             }
 
-            // Update the object "infos" properties depending on which key is under consideration
-            infos.mode == -1 ? infos.keyTra = text.toString() : infos.keySub = text.toString()
+            else if (contentID == "substitution" && infos.mode == 1) {
+                infos.seedSub = ""
+                infos.saltSub = ""
+            }
 
             return infos
         }
 
-        // If the key is made of characters from the library
-        else if (validateCharacterContent(value, valueLength, infos.library)) {
-            // If the key is smaller than the message
-            if (valueLength < infos.msgLength) {
-                let numberList
+        // If the key and salt are made of characters from the library
+        else if (validateCharacterContent(valueKey, valueKeyLength, infos.library) &&
+        validateCharacterContent(valueSalt, valueSaltLength, infos.library)) {
+            if (valueKeyLength == 0 || valueSaltLength == 0) {
+                throw new Error("the " + contentID + " key and salt must contain at least one character.") }
 
-                // If we are evaluating the substitution key
-                if (contentID == "keySub") {
-                    infos.prngSub = validatePRNGValue(document.getElementById("prngSub"), errorMsg)
-                    infos.seedSub = validateSeedValue(document.getElementById("seedSub"), errorMsg)
+            let combinedValue = await deriveSeededKey(valueKey, valueSalt)
 
-                    // Generate a list of pseudorandom numbers
-                    numberList = inversiveCongruentialGenerator(infos.msgLength - valueLength, infos.libraryLength, infos.prngSub, infos.seedSub, false) 
-                }
-
-                // If we are evaluating the transposition key
-                else {
-                    infos.prngTra = validatePRNGValue(document.getElementById("prngTra"), errorMsg)
-                    infos.seedTra = validateSeedValue(document.getElementById("seedTra"), errorMsg)
-
-                    // Generate a list of pseudorandom numbers
-                    numberList = inversiveCongruentialGenerator(infos.msgLength - valueLength, infos.libraryLength, infos.prngTra, infos.seedTra, false) 
-                }                 
-
-                // Expand the message with padding characters until the message length is valid, using the
-                // pseudorandom number list as index values for the library
-                for (let i = valueLength, count = 0; i < infos.msgLength; i++) {
-                    value += infos.library[numberList[count++]].toString()
-                }
-            }
-
-            // If the key is longer than the message, throw an error
-            else if (valueLength > infos.msgLength) { throw new Error("the " + errorMsg + " key cannot be longer than the message.") }
-            
-            // Update the object infos depending on which key has been validated
-            contentID == "keySub" ? infos.keySub = value.toString() : infos.keyTra = value.toString()
+            contentID == "substitution" ? infos.keySub = generateStringfromArray(combinedValue, infos) : 
+                infos.keySub = generateStringfromArray(combinedValue, infos)
 
             return infos
         }
 
-        // If the key contains characters that are not in the library, throw an error
-        else { throw new Error("the " + errorMsg + " key must contain characters from the library only.") }
+        // If the key or the salt contains characters that are not in the library, throw an error
+        else { throw new Error("the " + contentID + " key and salt must contain characters from the library only.") }
     }
 
     // Method that validates that the provided string value contains characters from the library only
@@ -341,45 +331,63 @@ function validate(value, infos, contentID) {
         return true
     }
 
-    // Method that validates the prngValue
-    function validatePRNGValue(prngElement, errorMsg) {
-        let prngValue = prngElement.value
+    // Method that generates the combined value of the key with the salt
+    async function deriveSeededKey(keyString, saltString) {
+        // Convert the key and salt strings into bytes
+        const seedBytes = utf16StringToBytes(keyString)
+        const saltBytes = utf16StringToBytes(saltString)
 
-        // If "prngValue" has a defined value, validate the value
-        if (prngValue != "") {
-            // If the prngValue is not an integer, throw an error message
-            if (prngValue != Math.floor(prngValue)) { throw new Error("the " + errorMsg + " PRNG value must be an integer value.") }
-                            
-            // If the prngValue is an integer from 1 to 4, set the value of infos.prngSub
-            else if (prngValue > 0 && prngValue < 5) { return Number(prngElement.value) }
-                            
-            // If the value is off-range, throw an error message
-            else { throw new Error("the " + errorMsg + " PRNG values must range from 1 to 4.") }
-        }
+        // Import the seed into the Web Crypto API as base key material
+        const baseValue = await window.crypto.subtle.importKey(
+            "raw", 
+            seedBytes, 
+            "PBKDF2", 
+            false, 
+            ["deriveBits"]
+        )
 
-        // If "prngValue" is empty, generate a value from 1 to 4
-        else { return Math.floor(Math.random() * 4) + 1 }
+        // Stretch the seed into exactly 4096 bits (512 bytes) using PBKDF2
+        const array = await window.crypto.subtle.deriveBits(
+            {
+            name: "PBKDF2",
+            salt: saltBytes,
+            iterations: 100000,
+            hash: "SHA-256"
+            },
+            baseValue,
+            4096 // The exact bit length requirement
+        )
+
+        // Return an ArrayBuffer containing exactly 512 deterministic bytes
+        return new Uint8Array(array)
     }
 
-    function validateSeedValue(seedElement, errorMsg) {
-        let seedValue = seedElement.value
+    function utf16StringToBytes(s) {
+        // Create a buffer twice the length of the string (2 bytes per char)
+        const buffer = new ArrayBuffer(s.length * 2)
+        const view = new Uint16Array(buffer)
+  
+        for (let i = 0; i < s.length; i++) {
+            view[i] = s.charCodeAt(i)
+        }
+  
+        // Return buffer as a Uint8Array
+        return new Uint8Array(buffer)
+    }
 
-        // If the seed has a defined value, validate the value
-        if (seedValue != "") {
-            // If the seed is not an integer, throw an error message
-            if (seedValue != Math.floor(seedValue)) { throw new Error("the " + errorMsg + " seed must be an integer value.") }
-                                
-            // If the seed is an integer from 0 to 65536, set the value of infos.seedSub
-            // NOTE: the seed must be casted as a BigInt, otherwise the multiplicativeInverse method does not work properly
-            else if (seedValue > -1 && seedValue < 65537) { return BigInt(seedElement.value) }
-                                
-            // If the value is off-range, throw an error message
-            else { throw new Error("the " + errorMsg + " values must range from 0 to 65536.") }
+    function generateStringfromArray(combinedValue, infos) {
+        let charString = ""
+
+        for (let i = 0; i < 2 * infos.libraryLength; i++) {
+            const bytes = new Uint8Array([combinedValue[i], combinedValue[++i]])
+            const view = new DataView(bytes.buffer)
+
+            // Read as 32-bit Little-Endian
+            let index = view.getUint16(0, true) % infos.libraryLength
+            charString += infos.library[index]
         }
 
-        // If "seedValue" is empty, generate a seed from 0 to 65536
-        // NOTE: the seed must be casted as a BigInt, otherwise the multiplicativeInverse method does not work properly
-        else { return BigInt(Math.floor(Math.random() * 65537)) }
+        return charString
     }
 }
 
@@ -429,7 +437,8 @@ function crypt(infos) {
         while (++counter * infos.libraryLength < infos.msgLength) {
             // Split the input message and substitution key into substrings of the length of the library
             partialMsg = Array.from(infos.result.toString().substring(counter * infos.libraryLength, (counter + 1) * infos.libraryLength))
-            partialKey = Array.from(infos.keySub.toString().substring(counter * infos.libraryLength, (counter + 1) * infos.libraryLength))
+            partialKey = Array.from(infos.keySub.toString())
+            // partialKey = Array.from(infos.keySub.toString().substring(counter * infos.libraryLength, (counter + 1) * infos.libraryLength))
 
             for (let i = 0; i < infos.libraryLength; i++) {
                 // Find actual symbol index value
@@ -463,13 +472,14 @@ function crypt(infos) {
         while (++counter * infos.libraryLength < infos.msgLength) {
             // Split the input message and transposition key into substrings of the length of the library
             partialMsg = Array.from(infos.result.toString().substring(counter * infos.libraryLength, (counter + 1) * infos.libraryLength))
-            partialKey = Array.from(infos.keyTra.toString().substring(counter * infos.libraryLength, (counter + 1) * infos.libraryLength))
+            partialKey = Array.from(infos.keySub.toString())
+            // partialKey = Array.from(infos.keySub.toString().substring(counter * infos.libraryLength, (counter + 1) * infos.libraryLength))
 
             for (initPos = start; initPos != end; initPos += step) {
                 // Find transposition displacement value using key
                 transposition = infos.library.indexOf(partialKey[initPos].toString())
                 // Compute (initial position index + displacement) mod infos.libraryLength
-                finalPos = ((initPos + transposition) % infos.libraryLength)
+                finalPos = ((initPos + transposition) % infos.libraryLength); // Keep the semi-colon here to prevent bugs
 
                 // Swap the character's positions
                 [partialMsg[initPos], partialMsg[finalPos]] = [partialMsg[finalPos], partialMsg[initPos]]
@@ -481,86 +491,4 @@ function crypt(infos) {
 
         return result
     }
-}
-
-// Method that generates a list of pseudorandom numbers using a seed (PRNG)
-function inversiveCongruentialGenerator(valueCount, libraryLength, prng, seed, msgBool) {
-    // Create a temp object to store the list of pseudorandom numbers. If the seed is used to
-    // generate/complete the keys, store the final value of the seed in the object
-    const list = []
-    let a
-    let c
-
-    // Select an inversive congruential pseudorandom number generator based on a primitive polynomial such that
-    // x^2 - cx - a over GF(65537)
-    // NOTE: the seed and related values must be casted as BigInts. Otherwise the multiplicativeInverse method will not work properly
-    switch (prng) {
-        case 1:
-            a = 11549n
-            c = 62819n
-            break
-        case 2:
-            a = 19267n
-            c = 52783n
-            break
-        case 3:
-            a = 26981n
-            c = 42829n
-            break
-        case 4:
-            a = 42403n
-            c = 32771n
-            break
-    }
-
-    for (let i = 0; i < valueCount; i++) {
-        seed == 0n ? seed = c : seed = BigInt((a * multiplicativeInverse(seed) + c) % 65537n)
-
-        // Cast the seed as a Number data type, since libraryLength is not a BigInt, but a Number data type
-        list.push(Number(seed) % libraryLength)
-    }
-
-    return list
-
-
-
-    // Modular multiplicative inversion based on Fermat's little theorem
-    // The theorem states:
-    // Given two positive integers a and p, where a is coprime to p, the following expression holds:
-    // a^(p - 1) % p == 1
-    // Since a * a^(p - 2) == a^(p - 1), the above expression implies:
-    // a * a^(p - 2) % p == 1
-    // Hence, a^(p - 2) is the modular multiplicative inverse of a
-    function multiplicativeInverse(a) {
-        // 1 and 65536 are their own multiplicative inverses
-        if (a == 1n || a == 65536n) { return a }
-
-        let b = a
-        // Variable for the method reduce
-        let r
-
-        // Each cycle of the for loop is equivalent to the function: f(a) = (b * a^2) % 65537 -> b^3 % 65537
-        // Then f^2(a) = f(f(a)) is equivalent to: f(f(a)) = (b^3 * a^4) % 65537 -> b^7 % 65537
-        // If we represent the n-th cycle of the for loop by a number n from 1 to 15, we can write f^n(a) as:
-        // f^n(a) = a^(2^n) * b^(2^n - 1) % 65537 -> b^(2^n) * b^(2^n - 1) % 65537 = b^(2^n + 2^n - 1) % 65537 =
-        // b^(2 * 2^n - 1) % 65537 = b^(2^(n + 1) - 1) % 65537
-        // If n = 15, we get f^15(a) -> b^(2^(15 + 1) - 1) % 65537 = b^(65536 - 1) % 65537 = b^65535 % 65537
-        for (let i = 0; i < 15; i++) {
-            a = reduce(a * a, r)
-            a = reduce(b * a, r)
-        }
-
-        return a
-
-        // Modular reduction
-        function reduce(c, r) {
-            // Fast modular reduction, with a possibility of negative values
-            r = (c & 65535n) - (c >> 16n)
-
-            // Value correction for negative results only
-            if (r < 0n) { r += 65537n }
-
-            return r
-        }
-    } 
 }
