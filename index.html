@@ -22,7 +22,7 @@
 
             <header>
                 <!-- Font size = 1, bold font weight -->
-                <p class="fs-1 fw-bold">MINIMALIST SUBSTITUTION AND TRANSPOSITION CIPHER</p>
+                <p class="fs-1 fw-bold">SUBSTITUTION AND TRANSPOSITION BLOCK CIPHER</p>
 
                 <br>
                 <br>
@@ -42,8 +42,10 @@
                     <p>The library must be made from unique characters, each character cannot appear more than once;<br>
                         The library must contain at least 2 characters, up to a maximum of 256 characters;<br>
                         The input message and the two keys can only contain characters from the library;<br>
-                        The message, the keys and the salt cannot be empty;<br>
-                        If your message is not a multiple of the length of the library, then an additionnal character
+                        The message cannot be empty, yet the keys and salt can be generated automatically;<br>
+                        The seeds cannot be more than 128 UTF-16 characters long, and the salt cannot be more than 32 UTF-16 characters long.<br>
+                        Otherwise the seeds and the salt will be truncated;<br>
+                        If your message is not a multiple of the length of the library, then an additionnal character<br>
                         will be added at the end to complete the message.</p>
                         <br>
                 </div>
