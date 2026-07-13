@@ -83,7 +83,7 @@ function updateHTML(element, time) {
 
         if (element.id == "output") {
             if (time != -1) {
-                document.querySelector(`#${element.id}P`).textContent = `Time elapsed: ${time} seconds`
+                document.querySelector(`#${element.id}P`).textContent = `The process took ${time} seconds to complete`
             }
 
             else {
@@ -350,51 +350,96 @@ async function validate(infos) {
         // If the key and salt are made of characters from the library
         else if (validateCharacterContent(valueSeed, valueSeedLength, infos.library) &&
         validateCharacterContent(valueSalt, valueSaltLength, infos.library)) {
-            if (valueSeedLength == 0) {
-                valueSeed = generateStringfromArray(generateSymmetricKey(), infos).toString()
+            if (valueSeedLength < 128) {
+                // The SHA-512 algorithm operates on an internal block size of 128 bytes, and the evaluated
+                // string is encoded in UTF-16
+                let seedSize = 128
+                valueSeed = valueSeed.toString() + generateStringFromArray(generateSymmetricKeyOrSalt(seedSize), infos, seedSize).toString().substring(0,
+                    128 - valueSeedLength)
                 valueSeedLength = valueSeed.length
 
-                contentID == "substitution" ? infos.seedSub = valueSeed :
-                infos.seedTra = valueSeed
+                contentID == "substitution" ? infos.seedSub = valueSeed.toString() :
+                infos.seedTra = valueSeed.toString()
+            }
+
+            // If the seed string is too long for the hashing function
+            else if (valueSeedLength > 128)
+            {
+                valueSeed = valueSeed.substring(0, 128)
+                valueSeedLength = valueSeed.length
+
+                contentID == "substitution" ? infos.seedSub = valueSeed.toString() :
+                infos.seedTra = valueSeed.toString()
             }
                 
-            if (valueSaltLength == 0) {
-                valueSalt = generateStringfromArray(generateSymmetricKey(), infos).toString()
+            if (valueSaltLength < 32) {
+                // 32 bytes are sufficient for the salt value, and the evaluated string is encoded in UTF-16, which
+                // is made of two bytes per character
+                let saltSize = 32
+                valueSalt = valueSalt.toString() + generateStringFromArray(generateSymmetricKeyOrSalt(saltSize), infos, saltSize).toString().substring(0,
+                    32 - valueSaltLength)
                 valueSaltLength = valueSalt.length
 
-                contentID == "substitution" ? infos.saltSub = valueSalt :
-                infos.saltTra = valueSalt
+                contentID == "substitution" ? infos.saltSub = valueSalt.toString() :
+                infos.saltTra = valueSalt.toString()
+            }
+
+            // If the salt string is too long
+            else if (valueSaltLength > 32) {
+                valueSalt = valueSalt.substring(0, 32)
+                valueSaltLength = valueSalt.length
+
+                contentID == "substitution" ? infos.saltSub = valueSalt.toString() :
+                infos.saltTra = valueSalt.toString()
             }
 
             let combinedValue
             let key = ""
 
             for (let i = 0; key.length < infos.msgLength; i++) {
-                // If combinedValue is undefined, generate a value
-                if (i == 0) { combinedValue = await deriveSeededKey(valueSeed, valueSalt) }
+                // If the for loop has already cycled once, then combinedValue is defined, and the seed and salt
+                // have already been used once. Hence, we can change the value of the next key, by creating new
+                // strings using the chaotic values from combinedValue
+                if (i != 0) {
+                    let index = 0n
+                    let tempString = ""
+                    let sum
 
-                // Get a value from the array combinedValue using the value i as an index, modulo the library length
-                let startValue = combinedValue[i] % infos.libraryLength
-                // Add the library content under a circular rotation as a string to valueSeed
-                valueSeed += infos.library.substring(startValue, infos.libraryLength).toString() +
-                    infos.library.substring(0, startValue).toString()
-                // Get a value from the array combinedValue using the value i + 256, modulo the library
-                // length. The index value has a potential maximum of 255, since this is the maximum valid range
-                // for the last index of the library. Since the array combinedValue has 512 elements in total, by
-                // adding 256 to the value of i we are making sure that our selection has a different index than
-                // the above selection
-                startValue = combinedValue[i + 256] % infos.libraryLength
-                // Generate a string from the library content under a circular rotation
-                let tempString = infos.library.substring(startValue, infos.libraryLength).toString() +
-                    infos.library.substring(0, startValue).toString()
-                // Reverse the order of the string's characters, then add the resulting string to valueSalt
-                valueSalt += tempString.split('').reverse().join('')
+                    for (let j = 0n; j < BigInt(valueSeedLength)/2n; j++) {
+                        // Get a value from the array combinedValue using j + index mod 256
+                        sum = (j + index) & 255n
+                        index = generateIndex(BigInt(combinedValue[sum]))
 
-                combinedValue = await deriveSeededKey(valueSeed, valueSalt)
-                key += generateStringfromArray(combinedValue, infos).toString()
+                        // Generate a half string using the index from the previous step
+                        tempString += infos.library[index % BigInt(infos.libraryLength)].toString()
+                    }
+
+                    // Generate a new valueSeed string
+                    valueSeed = (tempString.toString() + valueSeed.toString().substring(0, 64)).toString()
+                    index = 255n
+                    tempString = ""
+
+                    for (let j = 0n; j < BigInt(valueSaltLength)/2n; j++) {
+                        // Get a value from the array combinedValue using the value 256 - j + index mod 256
+                        sum = (256n - j + index) & 255n
+                        index = generateIndex(BigInt(combinedValue[sum]))
+
+                        // Generate a half string using the index from the previous step
+                        tempString += infos.library[index % BigInt(infos.libraryLength)].toString()
+                    }
+
+                    // Generate a new valueSalt string
+                    valueSalt = (tempString.toString() + valueSalt.toString().substring(0, 16)).toString()
+
+                    combinedValue = await deriveSeededKey(valueSeed, valueSalt)
+                }
+
+                else { combinedValue = await deriveSeededKey(valueSeed, valueSalt) }
+
+                key += generateStringFromArray(combinedValue, infos, infos.libraryLength).toString()
             }
 
-            contentID == "substitution" ? infos.keySub = key : infos.keyTra = key
+            contentID == "substitution" ? infos.keySub = key.toString() : infos.keyTra = key.toString()
 
             return infos
         }
@@ -413,21 +458,36 @@ async function validate(infos) {
         return true
     }
 
-    // Method that generates
-    function generateSymmetricKey() {
-        // 4096 bits / 8 = 512 bytes
-        const keyBuffer = new Uint8Array(512);
+    // Method that generates an array of pseudorandom values
+    function generateSymmetricKeyOrSalt(size) {
+        const buffer = new Uint16Array(size);
   
         // Fills the array in-place with secure pseudorandom values
-        window.crypto.getRandomValues(keyBuffer);
+        window.crypto.getRandomValues(buffer);
   
-        return keyBuffer;
+        return buffer;
+    }
+
+    // Method that convert an array to a string
+    function generateStringFromArray(array, infos, length) {
+        let charString = ""
+
+        for (let i = 0; i < length; i++) {
+            const bytes = new Uint16Array([array[i]])
+            const view = new DataView(bytes.buffer)
+
+            // Read as 16-bit Little-Endian
+            let index = view.getUint16(0, true) % infos.libraryLength
+            charString += infos.library[index]
+        }
+
+        return charString.toString()
     }
 
     // Method that generates the combined value of the key with the salt
-    async function deriveSeededKey(keyString, saltString) {
+    async function deriveSeededKey(seedString, saltString) {
         // Convert the key and salt strings into bytes
-        const seedBytes = utf16StringToBytes(keyString)
+        const seedBytes = utf16StringToBytes(seedString)
         const saltBytes = utf16StringToBytes(saltString)
 
         // Import the seed into the Web Crypto API as base key material
@@ -445,42 +505,72 @@ async function validate(infos) {
             name: "PBKDF2",
             salt: saltBytes,
             iterations: 100000,
-            hash: "SHA-256"
+            hash: "SHA-512"
             },
             baseKey,
             4096 // The exact bit length requirement
         )
 
         // Return an ArrayBuffer containing exactly 512 deterministic bytes
-        return new Uint8Array(derivedBits)
+        return new Uint16Array(derivedBits)
     }
 
-    function utf16StringToBytes(s) {
+    function utf16StringToBytes(string) {
         // Create a buffer twice the length of the string (2 bytes per char)
-        const buffer = new ArrayBuffer(s.length * 2)
+        const buffer = new ArrayBuffer(string.length * 2)
         const view = new Uint16Array(buffer)
   
-        for (let i = 0; i < s.length; i++) {
-            view[i] = s.charCodeAt(i)
+        for (let i = 0; i < string.length; i++) {
+            view[i] = string.charCodeAt(i)
         }
   
         // Return buffer as a Uint8Array
         return new Uint8Array(buffer)
     }
 
-    function generateStringfromArray(combinedValue, infos) {
-        let charString = ""
+    // Method that generates a value from a byte using a modular exponential function mod 257
+    function generateIndex(exponent) {
+        // The exponent is from 0 to 65535, so let's reduce its range from 0 to 255
+        exponent = exponent & 255n
+        // Let's add 1 to the value to make it compatible with modular exponentiation
+        exponent++
 
-        for (let i = 0; i < 2 * infos.libraryLength; i += 2) {
-            const bytes = new Uint8Array([combinedValue[i], combinedValue[i + 1]])
-            const view = new DataView(bytes.buffer)
+        // The following values have to be casted as BigInts, otherwise the method will not work properly
+        // Subtract 1 to make the value compatible with an index from 0 to 255
+        if (exponent == 1n) { return 101n - 1n }
+        else if (exponent == 256n) { return 1n - 1n }
 
-            // Read as 16-bit Little-Endian
-            let index = view.getUint16(0, true) % infos.libraryLength
-            charString += infos.library[index]
+        let oddVSEven = exponent % 2n
+        let factor
+        if (oddVSEven == 1n) {
+            factor = 101n
+            exponent--
         }
 
-        return charString
+        else {
+            factor = 1n
+        }
+
+        // 101^2 = 178
+        let multiplier = 178n
+        let temp = 1n
+        for (let i = 0n; i < exponent/2n; i++) {
+            temp = reduce(temp * multiplier)
+        }
+
+        // Subtract 1 to make the value compatible with an index from 0 to 255
+        return reduce(temp * factor) - 1n
+
+
+
+
+        function reduce(v) {
+            let r = (v & 255n) - (v >> 8n)
+
+            if (r < 0n) { r += 257n }
+
+            return r
+        }
     }
 }
 
