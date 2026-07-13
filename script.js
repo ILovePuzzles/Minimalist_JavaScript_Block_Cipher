@@ -133,13 +133,9 @@ function reset() {
     // Actualize the CSS for elementOutput
     elementOutput.classList.remove('error')
 
-    if (document.body.classList.contains('light-theme')) {
-        elementOutput.style.color = 'black'
-    }
+    if (document.body.classList.contains('light-theme')) { elementOutput.style.color = 'black' }
 
-    else {
-        elementOutput.style.color = 'white'
-    }
+    else { elementOutput.style.color = 'white' }
 }
 
 // Method that shows/hides instructions
@@ -152,13 +148,9 @@ async function convert(encode) {
     try {
         elementOutput.classList.remove('error')
 
-        if (document.body.classList.contains('light-theme')) {
-            elementOutput.style.color = 'black'
-        }
+        if (document.body.classList.contains('light-theme')) { elementOutput.style.color = 'black' }
 
-        else {
-            elementOutput.style.color = 'white'
-        }
+        else { elementOutput.style.color = 'white' }
 
         elementOutput.value = "Conversion in progress"
 
@@ -300,21 +292,21 @@ async function validate(infos) {
 
     // Method that validates the key and salt value
     async function validateKeyAndSalt(infos, contentID) {
-        let valueKey
-        let valueKeyLength
+        let valueSeed
+        let valueSeedLength
         let valueSalt
         let valueSaltLength
 
         if (contentID == "substitution") {
-            valueKey = infos.seedSub.toString()
-            valueKeyLength = valueKey.length
+            valueSeed = infos.seedSub.toString()
+            valueSeedLength = valueSeed.length
             valueSalt = infos.saltSub.toString()
             valueSaltLength = valueSalt.length
         }
 
         else {
-            valueKey = infos.seedTra.toString()
-            valueKeyLength = valueKey.length
+            valueSeed = infos.seedTra.toString()
+            valueSeedLength = valueSeed.length
             valueSalt = infos.saltTra.toString()
             valueSaltLength = valueSalt.length
         }
@@ -338,37 +330,50 @@ async function validate(infos) {
         }
 
         // If the key and salt are made of characters from the library
-        else if (validateCharacterContent(valueKey, valueKeyLength, infos.library) &&
+        else if (validateCharacterContent(valueSeed, valueSeedLength, infos.library) &&
         validateCharacterContent(valueSalt, valueSaltLength, infos.library)) {
-            if (valueKeyLength == 0 || valueSaltLength == 0) {
-                throw new Error("the " + contentID + " key and salt must contain at least one character.") }
+            if (valueSeedLength == 0) {
+                valueSeed = generateStringfromArray(generateSymmetricKey(), infos).toString()
+                valueSeedLength = valueSeed.length
+
+                contentID == "substitution" ? infos.seedSub = valueSeed :
+                infos.seedTra = valueSeed
+            }
+                
+            if (valueSaltLength == 0) {
+                valueSalt = generateStringfromArray(generateSymmetricKey(), infos).toString()
+                valueSaltLength = valueSalt.length
+
+                contentID == "substitution" ? infos.saltSub = valueSalt :
+                infos.saltTra = valueSalt
+            }
 
             let combinedValue
             let key = ""
 
             for (let i = 0; key.length < infos.msgLength; i++) {
-                // If the message is longer than the library, use an element of the array combinedValue to generate new keys
-                if (i > 0) {
-                    // Get a value from the array combinedValue using the value i as an index, modulo the library length
-                    let startValue = combinedValue[i - 1] % infos.libraryLength
-                    // Add the library content under a circular rotation as a string to valueKey
-                    valueKey += infos.library.substring(startValue, infos.libraryLength).toString() +
-                        infos.library.substring(0, startValue).toString()
-                    // Get a value from the array combinedValue using the value i + 256, modulo the library
-                    // length. The index value has a potential maximum of 255, since this is the maximum valid range
-                    // for the last index of the library. Since the array combinedValue has 512 elements in total, by
-                    // adding 256 to the value of i we are making sure that our selection has a different index than
-                    // the above selection
-                    startValue = combinedValue[i - 1 + 256] % infos.libraryLength
-                    // Generate a string from the library content under a circular rotation
-                    let tempString = infos.library.substring(startValue, infos.libraryLength).toString() +
-                        infos.library.substring(0, startValue).toString()
-                    // Reverse the order of the string's characters, then add the resulting string to valueSalt
-                    valueSalt += tempString.split('').reverse().join('')
-                }
+                // If combinedValue is undefined, generate a value
+                if (i == 0) { combinedValue = await deriveSeededKey(valueSeed, valueSalt) }
 
-                combinedValue = await deriveSeededKey(valueKey, valueSalt)
-                key += generateStringfromArray(combinedValue, infos)
+                // Get a value from the array combinedValue using the value i as an index, modulo the library length
+                let startValue = combinedValue[i] % infos.libraryLength
+                // Add the library content under a circular rotation as a string to valueSeed
+                valueSeed += infos.library.substring(startValue, infos.libraryLength).toString() +
+                    infos.library.substring(0, startValue).toString()
+                // Get a value from the array combinedValue using the value i + 256, modulo the library
+                // length. The index value has a potential maximum of 255, since this is the maximum valid range
+                // for the last index of the library. Since the array combinedValue has 512 elements in total, by
+                // adding 256 to the value of i we are making sure that our selection has a different index than
+                // the above selection
+                startValue = combinedValue[i + 256] % infos.libraryLength
+                // Generate a string from the library content under a circular rotation
+                let tempString = infos.library.substring(startValue, infos.libraryLength).toString() +
+                    infos.library.substring(0, startValue).toString()
+                // Reverse the order of the string's characters, then add the resulting string to valueSalt
+                valueSalt += tempString.split('').reverse().join('')
+
+                combinedValue = await deriveSeededKey(valueSeed, valueSalt)
+                key += generateStringfromArray(combinedValue, infos).toString()
             }
 
             contentID == "substitution" ? infos.keySub = key : infos.keyTra = key
@@ -390,6 +395,17 @@ async function validate(infos) {
         return true
     }
 
+    // Method that generates
+    function generateSymmetricKey() {
+        // 4096 bits / 8 = 512 bytes
+        const keyBuffer = new Uint8Array(512);
+  
+        // Fills the array in-place with secure pseudorandom values
+        window.crypto.getRandomValues(keyBuffer);
+  
+        return keyBuffer;
+    }
+
     // Method that generates the combined value of the key with the salt
     async function deriveSeededKey(keyString, saltString) {
         // Convert the key and salt strings into bytes
@@ -397,7 +413,7 @@ async function validate(infos) {
         const saltBytes = utf16StringToBytes(saltString)
 
         // Import the seed into the Web Crypto API as base key material
-        const baseValue = await window.crypto.subtle.importKey(
+        const baseKey = await window.crypto.subtle.importKey(
             "raw", 
             seedBytes, 
             "PBKDF2", 
@@ -406,19 +422,19 @@ async function validate(infos) {
         )
 
         // Stretch the seed into exactly 4096 bits (512 bytes) using PBKDF2
-        const array = await window.crypto.subtle.deriveBits(
+        const derivedBits = await window.crypto.subtle.deriveBits(
             {
             name: "PBKDF2",
             salt: saltBytes,
             iterations: 100000,
             hash: "SHA-256"
             },
-            baseValue,
+            baseKey,
             4096 // The exact bit length requirement
         )
 
         // Return an ArrayBuffer containing exactly 512 deterministic bytes
-        return new Uint8Array(array)
+        return new Uint8Array(derivedBits)
     }
 
     function utf16StringToBytes(s) {
