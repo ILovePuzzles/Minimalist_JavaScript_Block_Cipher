@@ -233,10 +233,10 @@ async function convert(encode) {
 
         // Update "elementOutput" HTML value and CSS style
         elementOutput.value = infosResult.result.toString()
-        elementOutput.focus()
         const end = performance.now()
         const elapsedSeconds = (end - start) / 1000
         updateHTML(elementOutput, elapsedSeconds.toFixed(2))
+        elementOutput.focus()
     }
 
     catch (error) {
@@ -407,19 +407,18 @@ async function validateAndGenerate(infos, autokeyBool, substitutionBool) {
         // If the key and salt are made of characters from the library
         else if (validateCharacterContent(valueSeed, valueSeedLength, infos.library) &&
         validateCharacterContent(valueSalt, valueSaltLength, infos.library)) {
-            if (valueSeedLength < 128) {
-                // The SHA-512 algorithm operates on an internal block size of 128 bytes, and the evaluated
-                // string is encoded in UTF-16
-                let seedSize = 128
+            // If the seed string is too short
+            if (valueSeedLength < 64) {
+                let seedSize = 64
                 valueSeed = valueSeed.concat(generateStringFromArray(generateSymmetricKeyOrSalt(seedSize), infos, seedSize).toString().substring(0,
-                    128 - valueSeedLength))
+                    64 - valueSeedLength))
                 valueSeedLength = valueSeed.length
 
                 contentID == "substitution" ? infos.seedSub = valueSeed.toString() :
                 infos.seedTra = valueSeed.toString()
             }
 
-            // If the seed string is too long for the hashing function
+            // If the seed string is too long
             else if (valueSeedLength > 128)
             {
                 valueSeed = valueSeed.substring(0, 128)
@@ -428,10 +427,9 @@ async function validateAndGenerate(infos, autokeyBool, substitutionBool) {
                 contentID == "substitution" ? infos.seedSub = valueSeed.toString() :
                 infos.seedTra = valueSeed.toString()
             }
-                
+            
+            // If the salt string is too short
             if (valueSaltLength < 16) {
-                // 16 bytes are sufficient for the salt value, and the evaluated string is encoded in UTF-16, which
-                // is made of two bytes per character
                 let saltSize = 16
                 valueSalt = valueSalt.concat(generateStringFromArray(generateSymmetricKeyOrSalt(saltSize), infos, saltSize).toString().substring(0,
                     16 - valueSaltLength))
@@ -442,8 +440,8 @@ async function validateAndGenerate(infos, autokeyBool, substitutionBool) {
             }
 
             // If the salt string is too long
-            else if (valueSaltLength > 64) {
-                valueSalt = valueSalt.substring(0, 64)
+            else if (valueSaltLength > 32) {
+                valueSalt = valueSalt.substring(0, 32)
                 valueSaltLength = valueSalt.length
 
                 contentID == "substitution" ? infos.saltSub = valueSalt.toString() :
