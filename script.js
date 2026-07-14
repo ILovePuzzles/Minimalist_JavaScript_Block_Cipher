@@ -194,9 +194,10 @@ async function convert(encode) {
             result: ""
         }
 
-        // Validate then set the properties for the object "infosEmpty"
+        // Validate then set the properties for the object "infosEmpty" and "infosLibrary"
         const infosLibrary = setLibrary(infosEmpty)
-        const infosComplete = await validate(infosLibrary)
+        // The parameter false specifies that the argument has to be validated
+        const infosComplete = await validateAndGenerate(infosLibrary, false)
 
         // If no error has been thrown, update the HTML elements, then encode or decode the message using the keys
         elementMsg.value = infosComplete.msg.toString()
@@ -210,7 +211,7 @@ async function convert(encode) {
         elementSaltTra.value = infosComplete.saltTra.toString()
         updateHTML(elementSaltTra)
 
-        const infosResult = crypt(infosComplete)
+        const infosResult = await crypt(infosComplete)
 
         // Update "elementOutput" HTML value and CSS style
         elementOutput.value = infosResult.result.toString()
@@ -254,12 +255,43 @@ function setLibrary(infos) {
 
 // Method that validates the input message, the seeds and the keys
 // If a string are valid but too short, the method expands the string
-async function validate(infos) {
-    const infosMsg = validateMsg(infos)
-    const infosKeySub = await validateKeyAndSalt(infosMsg, "substitution")
-    const infosKeyTra = await validateKeyAndSalt(infosKeySub, "transposition")
+async function validateAndGenerate(infos, autokeyBool, substitutionBool) {
+    if (!autokeyBool) {
+        const infosMsg = validateMsg(infos)
+        const infosKeySub = await validateKeyAndSalt(infosMsg, "substitution")
+        const infosKeyTra = await validateKeyAndSalt(infosKeySub, "transposition")
 
-    return infosKeyTra
+        return infosKeyTra
+    }
+
+    else {
+        let msg = infos.text
+        let key
+
+        substitutionBool ? key = infos.keySub : key = infos.keyTra
+
+        let oddVSEven = infos.libraryLength % 2
+        let roundedandHalvedLibraryLength = (infos.libraryLength - oddVSEven)/2
+        let valueSeed
+        let valueSalt 
+
+        if (substitutionBool) {
+            valueSeed = msg.substring(0, roundedandHalvedLibraryLength).concat(key.substring(roundedandHalvedLibraryLength, infos.libraryLength))
+            valueSalt = key.substring(0, roundedandHalvedLibraryLength).concat(msg.substring(roundedandHalvedLibraryLength, infos.libraryLength))
+        }
+
+        else {
+            valueSeed = key.substring(0, roundedandHalvedLibraryLength).concat(msg.substring(roundedandHalvedLibraryLength, infos.libraryLength))
+            valueSalt = msg.substring(0, roundedandHalvedLibraryLength).concat(key.substring(roundedandHalvedLibraryLength, infos.libraryLength))
+        }
+
+        
+        let combinedValue = await deriveSeededKey(valueSeed, valueSalt)
+        key = generateStringFromArray(combinedValue, infos, infos.libraryLength).toString()
+
+        return key.toString()
+    }
+
 
 
 
@@ -286,7 +318,7 @@ async function validate(infos) {
                     // Expand the message with a padding character until the message length is valid, using the
                     // pseudorandom number as an index value for the library
                     for (let i = valueLength; i < valueLength + infos.libraryLength - valueLength % infos.libraryLength; i++) {
-                        value += infos.library[pseudorandomValue].toString()
+                        value = value.concat(infos.library[pseudorandomValue].toString())
                     }
                 }
 
@@ -354,8 +386,8 @@ async function validate(infos) {
                 // The SHA-512 algorithm operates on an internal block size of 128 bytes, and the evaluated
                 // string is encoded in UTF-16
                 let seedSize = 128
-                valueSeed = valueSeed.toString() + generateStringFromArray(generateSymmetricKeyOrSalt(seedSize), infos, seedSize).toString().substring(0,
-                    128 - valueSeedLength)
+                valueSeed = valueSeed.concat(generateStringFromArray(generateSymmetricKeyOrSalt(seedSize), infos, seedSize).toString().substring(0,
+                    128 - valueSeedLength))
                 valueSeedLength = valueSeed.length
 
                 contentID == "substitution" ? infos.seedSub = valueSeed.toString() :
@@ -376,8 +408,8 @@ async function validate(infos) {
                 // 32 bytes are sufficient for the salt value, and the evaluated string is encoded in UTF-16, which
                 // is made of two bytes per character
                 let saltSize = 32
-                valueSalt = valueSalt.toString() + generateStringFromArray(generateSymmetricKeyOrSalt(saltSize), infos, saltSize).toString().substring(0,
-                    32 - valueSaltLength)
+                valueSalt = valueSalt.concat(generateStringFromArray(generateSymmetricKeyOrSalt(saltSize), infos, saltSize).toString().substring(0,
+                    32 - valueSaltLength))
                 valueSaltLength = valueSalt.length
 
                 contentID == "substitution" ? infos.saltSub = valueSalt.toString() :
@@ -393,51 +425,8 @@ async function validate(infos) {
                 infos.saltTra = valueSalt.toString()
             }
 
-            let combinedValue
-            let key = ""
-
-            for (let i = 0; key.length < infos.msgLength; i++) {
-                // If the for loop has already cycled once, then combinedValue is defined, and the seed and salt
-                // have already been used once. Hence, we can change the value of the next key, by creating new
-                // strings using the chaotic values from combinedValue
-                if (i != 0) {
-                    let index = 0n
-                    let tempString = ""
-                    let sum
-
-                    for (let j = 0n; j < BigInt(valueSeedLength)/2n; j++) {
-                        // Get a value from the array combinedValue using j + index mod 256
-                        sum = (j + index) & 255n
-                        index = generateIndex(BigInt(combinedValue[sum]))
-
-                        // Generate a half string using the index from the previous step
-                        tempString += infos.library[index % BigInt(infos.libraryLength)].toString()
-                    }
-
-                    // Generate a new valueSeed string
-                    valueSeed = (tempString.toString() + valueSeed.toString().substring(0, 64)).toString()
-                    index = 255n
-                    tempString = ""
-
-                    for (let j = 0n; j < BigInt(valueSaltLength)/2n; j++) {
-                        // Get a value from the array combinedValue using the value 256 - j + index mod 256
-                        sum = (256n - j + index) & 255n
-                        index = generateIndex(BigInt(combinedValue[sum]))
-
-                        // Generate a half string using the index from the previous step
-                        tempString += infos.library[index % BigInt(infos.libraryLength)].toString()
-                    }
-
-                    // Generate a new valueSalt string
-                    valueSalt = (tempString.toString() + valueSalt.toString().substring(0, 16)).toString()
-
-                    combinedValue = await deriveSeededKey(valueSeed, valueSalt)
-                }
-
-                else { combinedValue = await deriveSeededKey(valueSeed, valueSalt) }
-
-                key += generateStringFromArray(combinedValue, infos, infos.libraryLength).toString()
-            }
+            let combinedValue = await deriveSeededKey(valueSeed, valueSalt)
+            let key = generateStringFromArray(combinedValue, infos, infos.libraryLength).toString()
 
             contentID == "substitution" ? infos.keySub = key.toString() : infos.keyTra = key.toString()
 
@@ -478,7 +467,7 @@ async function validate(infos) {
 
             // Read as 16-bit Little-Endian
             let index = view.getUint16(0, true) % infos.libraryLength
-            charString += infos.library[index]
+            charString = charString.concat(infos.library[index])
         }
 
         return charString.toString()
@@ -527,80 +516,120 @@ async function validate(infos) {
         // Return buffer as a Uint8Array
         return new Uint8Array(buffer)
     }
-
-    // Method that generates a value from a byte using a modular exponential function mod 257
-    function generateIndex(exponent) {
-        // The exponent is from 0 to 65535, so let's reduce its range from 0 to 255
-        exponent = exponent & 255n
-        // Let's add 1 to the value to make it compatible with modular exponentiation
-        exponent++
-
-        // The following values have to be casted as BigInts, otherwise the method will not work properly
-        // Subtract 1 to make the value compatible with an index from 0 to 255
-        if (exponent == 1n) { return 101n - 1n }
-        else if (exponent == 256n) { return 1n - 1n }
-
-        let oddVSEven = exponent % 2n
-        let factor
-        if (oddVSEven == 1n) {
-            factor = 101n
-            exponent--
-        }
-
-        else {
-            factor = 1n
-        }
-
-        // 101^2 = 178
-        let multiplier = 178n
-        let temp = 1n
-        for (let i = 0n; i < exponent/2n; i++) {
-            temp = reduce(temp * multiplier)
-        }
-
-        // Subtract 1 to make the value compatible with an index from 0 to 255
-        return reduce(temp * factor) - 1n
-
-
-
-
-        function reduce(v) {
-            let r = (v & 255n) - (v >> 8n)
-
-            if (r < 0n) { r += 257n }
-
-            return r
-        }
-    }
 }
 
 // Method that encrypts/decrypts the message using the keys
-function crypt(infos) {
+async function crypt(infos) {
     infos.result = infos.msg.toString()
 
     // The counter helps to split the message into smaller substrings
     let counter = -1
-    let partialMsg
-    let partialKey
-    let result = ""
-    let initValue
-    let valueShift
-    let finalValue
+    let text = ""
 
-    // Select encryption/decryption mode
     switch (infos.mode) {
         case -1:
-            infos.result = substitute(infos, counter, partialMsg, partialKey, result, initValue, valueShift, finalValue).toString()
-            break
-        case 0:
-            infos.encode ? infos.result = substitute(infos, counter, partialMsg, partialKey, result, initValue, valueShift, finalValue).toString() :
-            infos.result = transpose(infos, counter, partialMsg, partialKey, result, initValue, valueShift, finalValue).toString()
+            // While the message has not been completely transformed
+            while (++counter * infos.libraryLength < infos.msgLength) {
+                // Split the input message into substrings of the length of the library
+                const partialMsg = infos.result.toString().substring(counter * infos.libraryLength,
+                        (counter + 1) * infos.libraryLength)
+                const transformedText = await substitute(infos, Array.from(partialMsg), counter)
+                text = text.concat(transformedText.toString())
 
-            infos.encode ? infos.result = transpose(infos, counter, partialMsg, partialKey, result, initValue, valueShift, finalValue).toString() :
-            infos.result = substitute(infos, counter, partialMsg, partialKey, result, initValue, valueShift, finalValue).toString()
+                if ((counter + 1) * infos.libraryLength < infos.msgLength) {
+                    const tempValues = {
+                        text: infos.encode ? transformedText.toString() : partialMsg.toString(),
+                        keySub: infos.keySub.toString(),
+                        library: infos.library.toString(),
+                        libraryLength: infos.libraryLength
+                    }
+
+                    infos.keySub = await validateAndGenerate(tempValues, true, true)
+                }
+            }
+
+            infos.result = text
             break
+
+        case 0:
+            if (infos.encode) {
+                // While the message has not been completely transformed
+                while (++counter * infos.libraryLength < infos.msgLength) {
+                    // Split the input message into substrings of the length of the library
+                    const partialMsg = infos.result.toString().substring(counter * infos.libraryLength,
+                        (counter + 1) * infos.libraryLength)
+                    let transformedText = await substitute(infos, Array.from(partialMsg), counter)
+                    transformedText = await transpose(infos, Array.from(transformedText), counter)
+
+                    text = text.concat(transformedText.toString())
+
+                    if ((counter + 1) * infos.libraryLength < infos.msgLength) {
+                        const tempValues = {
+                            text: infos.encode ? transformedText.toString() : partialMsg.toString(),
+                            keySub: infos.keySub.toString(),
+                            keyTra: infos.keyTra.toString(),
+                            library: infos.library.toString(),
+                            libraryLength: infos.libraryLength
+                        }
+
+                        infos.keySub = await validateAndGenerate(tempValues, true, true)
+                        infos.keyTra = await validateAndGenerate(tempValues, true, false)
+                    }
+                }
+            }
+
+            else {
+                // While the message has not been completely transformed
+                while (++counter * infos.libraryLength < infos.msgLength) {
+                    // Split the input message into substrings of the length of the library
+                    const partialMsg = infos.result.toString().substring(counter * infos.libraryLength,
+                        (counter + 1) * infos.libraryLength)
+                    let transformedText = await transpose(infos, Array.from(partialMsg), counter)
+                    transformedText = await substitute(infos, Array.from(transformedText), counter)
+
+                    text = text.concat(transformedText.toString())
+
+                    if ((counter + 1) * infos.libraryLength < infos.msgLength) {
+                        const tempValues = {
+                            text: infos.encode ? transformedText.toString() : partialMsg.toString(),
+                            keySub: infos.keySub.toString(),
+                            keyTra: infos.keyTra.toString(),
+                            library: infos.library.toString(),
+                            libraryLength: infos.libraryLength
+                        }
+
+                        infos.keySub = await validateAndGenerate(tempValues, true, true)
+                        infos.keyTra = await validateAndGenerate(tempValues, true, false)
+                    }
+                }
+            }
+
+            infos.result = text
+
+            break
+
         case 1:
-            infos.result = transpose(infos, counter, partialMsg, partialKey, result, initValue, valueShift, finalValue).toString()
+            // While the message has not been completely transformed
+            while (++counter * infos.libraryLength < infos.msgLength) {
+                // Split the input message into substrings of the length of the library
+                const partialMsg = infos.result.toString().substring(counter * infos.libraryLength,
+                        (counter + 1) * infos.libraryLength)
+                const transformedText = await transpose(infos, Array.from(partialMsg), counter)
+                text = text.concat(transformedText.toString())
+
+                if ((counter + 1) * infos.libraryLength < infos.msgLength) {
+                    const tempValues = {
+                        text: infos.encode ? transformedText.toString() : partialMsg.toString(),
+                        keyTra: infos.keyTra.toString(),
+                        library: infos.library.toString(),
+                        libraryLength: infos.libraryLength
+                    }
+
+                    infos.keyTra = await validateAndGenerate(tempValues, true, false)
+                }
+            }
+
+            infos.result = text
             break
     }
 
@@ -611,38 +640,34 @@ function crypt(infos) {
 
 
     // Method that substitutes the characters and returns a string
-    function substitute(infos, counter, partialMsg, partialKey, result, initSymb, substitution, finalSymb) {
+    async function substitute(infos, partialMsg, counter) {
         // Define the sign accordingly to encoding vs decoding; substitution encoding is based on modular addition,
         // while substitution decoding is based on modular subtraction
         const sign = (infos.encode ? 1 : -1)
 
-        // While the message has not been completely transformed
-        while (++counter * infos.libraryLength < infos.msgLength) {
-            // Split the input message and substitution key into substrings of the length of the library
-            partialMsg = Array.from(infos.result.toString().substring(counter * infos.libraryLength, (counter + 1) * infos.libraryLength))
-            partialKey = Array.from(infos.keySub.toString().substring(counter * infos.libraryLength, (counter + 1) * infos.libraryLength))
+        // let partialKey = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ ."
+        let partialKey = infos.keySub.toString()
+        let initSymb
+        let substitution
+        let finalSymb
 
-            for (let i = 0; i < infos.libraryLength; i++) {
-                // Find actual symbol index value
-                initSymb = infos.library.indexOf(partialMsg[i].toString())
-                // Find transposition displacement value using key
-                substitution = infos.library.indexOf(partialKey[i].toString())
-                // Compute (initial symbol index + displacement) mod infos.libraryLength
-                finalSymb = (initSymb + sign * substitution + infos.libraryLength) % infos.libraryLength
+        for (let i = 0; i < infos.libraryLength; i++) {
+            // Find actual symbol index value
+            initSymb = infos.library.indexOf(partialMsg[i].toString())
+            // Find transposition displacement value using key
+            substitution = infos.library.indexOf(partialKey[i].toString())
+            // Compute (initial symbol index + displacement) mod infos.libraryLength
+            finalSymb = (initSymb + sign * substitution + infos.libraryLength) % infos.libraryLength
 
-                // Substitute the old symbol for the new one
-                partialMsg[i] = infos.library[finalSymb].toString()
-            }
-
-            // Join the characters and add the string to result
-            result += partialMsg.join("")
+            // Substitute the old symbol for the new one
+            partialMsg[i] = infos.library[finalSymb].toString()
         }
 
-        return result
+        return partialMsg.join("")
     }
 
     // Method that transposes the characters and returns a string
-    function transpose(infos, counter, partialMsg, partialKey, result, initPos, transposition, finalPos) {
+    async function transpose(infos, partialMsg, counter) {
         // Define the start, end, and step values according to encoding vs decoding; transposition encoding
         // starts from the beginning of the string up to the end, while transposition decoding starts from
         // the end of the string down to the beginning
@@ -650,26 +675,21 @@ function crypt(infos) {
         const end = (infos.encode ? infos.libraryLength : -1)
         const step = (infos.encode ? 1 : -1)
 
-        // While the message has not been completely transformed
-        while (++counter * infos.libraryLength < infos.msgLength) {
-            // Split the input message and transposition key into substrings of the length of the library
-            partialMsg = Array.from(infos.result.toString().substring(counter * infos.libraryLength, (counter + 1) * infos.libraryLength))
-            partialKey = Array.from(infos.keyTra.toString().substring(counter * infos.libraryLength, (counter + 1) * infos.libraryLength))
+        // let partialKey = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ ."
+        let partialKey = infos.keyTra.toString()
+        let transposition
+        let finalPos
 
-            for (initPos = start; initPos != end; initPos += step) {
-                // Find transposition displacement value using key
-                transposition = infos.library.indexOf(partialKey[initPos].toString())
-                // Compute (initial position index + displacement) mod infos.libraryLength
-                finalPos = ((initPos + transposition) % infos.libraryLength); // Keep the semi-colon here to prevent bugs
+        for (let initPos = start; initPos != end; initPos += step) {
+            // Find transposition displacement value using key
+            transposition = infos.library.indexOf(partialKey[initPos].toString())
+            // Compute (initial position index + displacement) mod infos.libraryLength
+            finalPos = ((initPos + transposition) % infos.libraryLength); // Keep the semi-colon here to prevent bugs
 
-                // Swap the character's positions
-                [partialMsg[initPos], partialMsg[finalPos]] = [partialMsg[finalPos], partialMsg[initPos]]
-            }
-
-            // Join the characters and add the string to result
-            result += partialMsg.join("")
+            // Swap the character's positions
+            [partialMsg[initPos], partialMsg[finalPos]] = [partialMsg[finalPos], partialMsg[initPos]]
         }
 
-        return result
+        return partialMsg.join("")
     }
 }
