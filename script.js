@@ -1,5 +1,5 @@
  // Default library value
-const defaultLibrary = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ ."
+const defaultLibrary = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ .!\"#$%&'()*+,-/:;<=>?@[\\]^_`{|}~¡¢£¤¥¦§¨©ª«¬­®¯°±²³´µ¶·¸¹º»¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ–—‘’“”…•\n€αβγδεζηθικλμνξοπρςστυφχψωĀāĂăĄąĆćĈĉĊċČčĎďĐđĒēĔĕĖėĘęĚěĜĝĞ"
 // Isolate important HTML elements based on their ID value
 const elementLibrary = document.getElementById("library")
 const elementOutput = document.getElementById("output")
@@ -175,6 +175,24 @@ async function convert(encode) {
         const elementSeedTra = document.getElementById("seedTra")
         const elementSaltTra = document.getElementById("saltTra")
 
+        // Validate that the values are not empty or not well formed
+        if (elementLibrary.value.toString() === "") { throw new Error("the library cannot be empty.") }
+        if (!elementLibrary.value.toString().isWellFormed()) { throw new Error("the library is not well formed.") }
+        if (elementMsg.value.toString() === "") { throw new Error("the message cannot be empty.") }
+        if (!elementMsg.value.toString().isWellFormed()) { throw new Error("the message is not well formed.") }
+        if (elementSeedSub.value.toString() !== "" && !elementSeedSub.value.toString().isWellFormed()) {
+            throw new Error("the substitution seed is not well formed.")
+        }
+        if (elementSaltSub.value.toString() !== "" && !elementSaltSub.value.toString().isWellFormed()) {
+            throw new Error("the substitution salt is not well formed.")
+        }
+        if (elementSeedTra.value.toString() !== "" && !elementSeedTra.value.toString().isWellFormed()) {
+            throw new Error("the transposition seed is not well formed.")
+        }
+        if (elementSaltTra.value.toString() !== "" && !elementSaltTra.value.toString().isWellFormed()) {
+            throw new Error("the transposition salt is not well formed.")
+        }
+
         // Create an object to store the values
         // NOTE: the seed and its related values must be casted as a BigInt data type, otherwise the
         // multiplicativeInverse method will not work properly
@@ -246,11 +264,18 @@ function setLibrary(infos) {
             if (isInvalid) { throw new Error("the library cannot contain the same character twice.") }
         }
 
+        // If the library contains a non UTF-16 character, then the library is invalid
+        for (const char of infos.library) {
+            if (char.codePointAt(0) > 0xFFFF) {
+                { throw new Error("the library must contain UTF-16 characters only.") }
+            }
+        }
+
         return infos
     }
 
     // If the library length is of invalid length, throw an error message
-    else { throw new Error("the library cannot be empty and cannot contain more than 256 characters.") }
+    else { throw new Error("the library must contain from 2 to 256 characters.") }
 }
 
 // Method that validates the input message, the seeds and the keys
@@ -404,12 +429,12 @@ async function validateAndGenerate(infos, autokeyBool, substitutionBool) {
                 infos.seedTra = valueSeed.toString()
             }
                 
-            if (valueSaltLength < 32) {
-                // 32 bytes are sufficient for the salt value, and the evaluated string is encoded in UTF-16, which
+            if (valueSaltLength < 16) {
+                // 16 bytes are sufficient for the salt value, and the evaluated string is encoded in UTF-16, which
                 // is made of two bytes per character
-                let saltSize = 32
+                let saltSize = 16
                 valueSalt = valueSalt.concat(generateStringFromArray(generateSymmetricKeyOrSalt(saltSize), infos, saltSize).toString().substring(0,
-                    32 - valueSaltLength))
+                    16 - valueSaltLength))
                 valueSaltLength = valueSalt.length
 
                 contentID == "substitution" ? infos.saltSub = valueSalt.toString() :
@@ -417,8 +442,8 @@ async function validateAndGenerate(infos, autokeyBool, substitutionBool) {
             }
 
             // If the salt string is too long
-            else if (valueSaltLength > 32) {
-                valueSalt = valueSalt.substring(0, 32)
+            else if (valueSaltLength > 64) {
+                valueSalt = valueSalt.substring(0, 64)
                 valueSaltLength = valueSalt.length
 
                 contentID == "substitution" ? infos.saltSub = valueSalt.toString() :
@@ -475,36 +500,36 @@ async function validateAndGenerate(infos, autokeyBool, substitutionBool) {
 
     // Method that generates the combined value of the key with the salt
     async function deriveSeededKey(seedString, saltString) {
-        // Convert the key and salt strings into bytes
-        const seedBytes = utf16StringToBytes(seedString)
-        const saltBytes = utf16StringToBytes(saltString)
+        // Convert the key and salt strings into shorts
+        const seedShorts = utf16StringToShort(seedString)
+        const saltShorts = utf16StringToShort(saltString)
 
         // Import the seed into the Web Crypto API as base key material
         const baseKey = await window.crypto.subtle.importKey(
             "raw", 
-            seedBytes, 
+            seedShorts, 
             "PBKDF2", 
             false, 
             ["deriveBits"]
         )
 
-        // Stretch the seed into exactly 4096 bits (512 bytes) using PBKDF2
+        // Stretch the seed into exactly 4096 bits using PBKDF2
         const derivedBits = await window.crypto.subtle.deriveBits(
             {
             name: "PBKDF2",
-            salt: saltBytes,
-            iterations: 100000,
+            salt: saltShorts,
+            iterations: 220000,
             hash: "SHA-512"
             },
             baseKey,
             4096 // The exact bit length requirement
         )
 
-        // Return an ArrayBuffer containing exactly 512 deterministic bytes
+        // Return an ArrayBuffer containing exactly 256 deterministic shorts
         return new Uint16Array(derivedBits)
     }
 
-    function utf16StringToBytes(string) {
+    function utf16StringToShort(string) {
         // Create a buffer twice the length of the string (2 bytes per char)
         const buffer = new ArrayBuffer(string.length * 2)
         const view = new Uint16Array(buffer)
@@ -513,8 +538,8 @@ async function validateAndGenerate(infos, autokeyBool, substitutionBool) {
             view[i] = string.charCodeAt(i)
         }
   
-        // Return buffer as a Uint8Array
-        return new Uint8Array(buffer)
+        // Return buffer as a Uint16Array
+        return new Uint16Array(buffer)
     }
 }
 
@@ -645,7 +670,6 @@ async function crypt(infos) {
         // while substitution decoding is based on modular subtraction
         const sign = (infos.encode ? 1 : -1)
 
-        // let partialKey = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ ."
         let partialKey = infos.keySub.toString()
         let initSymb
         let substitution
@@ -675,7 +699,6 @@ async function crypt(infos) {
         const end = (infos.encode ? infos.libraryLength : -1)
         const step = (infos.encode ? 1 : -1)
 
-        // let partialKey = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ ."
         let partialKey = infos.keyTra.toString()
         let transposition
         let finalPos
