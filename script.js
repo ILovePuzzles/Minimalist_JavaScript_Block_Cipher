@@ -616,28 +616,41 @@ async function crypt(infos) {
     // Method that generates keys
     async function generateKeys(tempValues, substitutionBool) {
         let msg = tempValues.text
-        let seed
-        let salt
+        let seed = ""
+        let salt = ""
         let key
 
-        substitutionBool ? seed = tempValues.seedSub : seed = tempValues.seedTra
-        substitutionBool ? salt = tempValues.saltSub : salt = tempValues.saltTra
         substitutionBool ? key = tempValues.keySub : key = tempValues.keyTra
 
+        // If a key has already been created
         if (key !== "") {
             const halvedLibraryLength = Math.floor(tempValues.libraryLength / 2)
 
+            // The purpose of the for loops if to mix the 4 substrings together before each autokey generation
+            // The substrings are 64 characters long, so we mix one character from each substring with the other subtrings
             if (substitutionBool) {
-                seed = msg.substring(0, halvedLibraryLength).concat(key.substring(halvedLibraryLength, tempValues.libraryLength))
-                salt = key.substring(0, halvedLibraryLength).concat(msg.substring(halvedLibraryLength, tempValues.libraryLength))
+                for (let i = 0; i < 32; i++) {
+                    seed += key[i].toString() + msg[i + 64].toString() + key[i + 128].toString() + msg[i + 192].toString()
+                    salt += msg[i + 32].toString() + key[i + 96].toString() + msg[i + 160].toString() + key[i + 224].toString()
+                }
             }
 
             else {
-                seed = key.substring(0, halvedLibraryLength).concat(msg.substring(halvedLibraryLength, tempValues.libraryLength))
-                salt = msg.substring(0, halvedLibraryLength).concat(key.substring(halvedLibraryLength, tempValues.libraryLength))
+                for (let i = 0; i < 32; i++) {
+                    seed += msg[255 - i - 32].toString() + key[255 - i - 96].toString() + msg[255 - i - 160].toString() +
+                        key[255 - i - 224].toString()
+                    salt += key[255 - i].toString() + msg[255 - i - 64].toString() + key[255 - i - 128].toString() +
+                        msg[255 - i - 192].toString()
+                }
             }
 
             key = ""
+        }
+
+        // If no key has been created yet
+        else {
+            substitutionBool ? seed = tempValues.seedSub : seed = tempValues.seedTra
+            substitutionBool ? salt = tempValues.saltSub : salt = tempValues.saltTra
         }
 
         let arrayList = await deriveSeededKey(seed, salt, tempValues)
