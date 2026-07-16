@@ -1,4 +1,4 @@
- // Default library value
+// Default library value
 const defaultLibrary = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ .!\"#$%&'()*+,-/:;<=>?@[\\]^_`{|}~¡¢£¤¥¦§¨©ª«¬­®¯°±²³´µ¶·¸¹º»¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ–—‘’“”…•\n€αβγδεζηθικλμνξοπρςστυφχψωĀāĂăĄąĆćĈĉĊċČčĎďĐđĒēĔĕĖėĘęĚěĜĝĞ"
 // Isolate important HTML elements based on their ID value
 const elementLibrary = document.getElementById("library")
@@ -34,7 +34,7 @@ document.getElementById("encode").onclick = function() { convert(true) }
 document.getElementById("decode").onclick = function() { convert(false) }
 document.getElementById("mode").onclick = function() { updateHTML(elementMode) }
 // If the element with id "colorTheme" is changed, update the CSS as follows
-document.getElementById("colorTheme").onchange = function() {
+document.getElementById("colorTheme").onchange = function(event) {
     if (event.target.type === 'radio') {
         // Boolean value that represents the selected theme: dark theme -> true, light theme -> false
         let darkThemeBool = (event.target.value == "dark")
@@ -158,26 +158,26 @@ async function convert(encode) {
         // Validate the library content
         const library = setLibrary(elementLibrary)
         // Here the parameter true specifies that the argument has to be validated
-        const infosComplete = validateAndGenerateInput(library, elementMsg, elementSeedSub, elementSaltSub,
+        let infos = validateAndGenerateInput(library, elementMsg, elementSeedSub, elementSaltSub,
             elementSeedTra, elementSaltTra, encode)
 
         // If no error has been thrown during validation, update the HTML elements
-        elementMsg.value = infosComplete.msg.toString()
+        elementMsg.value = infos.msg.toString()
         updateHTML(elementMsg)
-        elementSeedSub.value = infosComplete.seedSub.toString()
+        elementSeedSub.value = infos.seedSub.toString()
         updateHTML(elementSeedSub)
-        elementSaltSub.value = infosComplete.saltSub.toString()
+        elementSaltSub.value = infos.saltSub.toString()
         updateHTML(elementSaltSub)
-        elementSeedTra.value = infosComplete.seedTra.toString()
+        elementSeedTra.value = infos.seedTra.toString()
         updateHTML(elementSeedTra)
-        elementSaltTra.value = infosComplete.saltTra.toString()
+        elementSaltTra.value = infos.saltTra.toString()
         updateHTML(elementSaltTra)
 
         // Encrypt/decrypt the messsage using the keys
-        const infosResult = await crypt(infosComplete)
+        infos = await crypt(infos)
 
         // Update "elementOutput" HTML value and CSS style
-        elementOutput.value = infosResult.result.toString()
+        elementOutput.value = infos.result.toString()
         const timeEndProcess = performance.now()
         // Compute the time elapsed in seconds since the beginning of the encryption/decryption process,
         // and round the value to 2 decimals of precision
@@ -188,7 +188,7 @@ async function convert(encode) {
 
     catch (error) {
         // Update "elementOutput" HTML value and CSS style
-        elementOutput.value = error
+        elementOutput.value = "Error: " + error.message
         elementOutput.classList.add('error')
         elementOutput.style.color = 'red'
         updateHTML(elementOutput, -1)
@@ -218,7 +218,7 @@ function setLibrary(elementLibrary) {
         // If the library contains a non UTF-16 character, then the library is invalid
         for (const char of libraryValue) {
             if (char.codePointAt(0) > 0xFFFF) {
-                { throw new Error("the library must contain UTF-16 characters only.") }
+                throw new Error("the library must contain UTF-16 characters only.")
             }
         }
 
@@ -253,7 +253,7 @@ function validateAndGenerateInput(library, elementMsg, elementSeedSub, elementSa
     if (saltTraValue !== "" && !saltTraValue.isWellFormed()) { throw new Error("the transposition salt is not well formed.") }
 
     // Create an object to store the values
-    const infos = {
+    let infos = {
         library: library.library.toString(),
         libraryLength: library.libraryLength,
         msg: msgValue.toString(),
@@ -269,11 +269,11 @@ function validateAndGenerateInput(library, elementMsg, elementSeedSub, elementSa
         result: ""
     }
 
-    const infosMsg = validateMsg(infos)
-    const infosKeySub = validateKeyAndSalt(infosMsg, "substitution")
-    const infosKeyTra = validateKeyAndSalt(infosKeySub, "transposition")
+    infos = validateMsg(infos)
+    infos = validateKeyAndSalt(infos, "substitution")
+    infos = validateKeyAndSalt(infos, "transposition")
 
-    return infosKeyTra
+    return infos
 
 
 
@@ -290,13 +290,13 @@ function validateAndGenerateInput(library, elementMsg, elementSeedSub, elementSa
             if (msgLength > 0 && msgLength < infos.libraryLength * infos.libraryLength + 1) {
                 // If the message length is not equal to the library length nor a multiple of it,
                 // expand the message by adding copies of the same pseudorandom character at the end
-                if (msgLength & (validLibraryLength - 1) != 0) {
+                if ((msgLength & (infos.libraryLength - 1)) != 0) {
                     // Generate a pseudorandom value
                     const pseudorandomCharacter = generateStringFromArray(generateSymmetricKeyOrSalt(1), infos, 1).toString()
 
                     // Expand the message with a padding character until the message length is valid, using the
                     // pseudorandom number as an index value for the library
-                    for (let i = msgLength; i < msgLength + infos.libraryLength - (msgLength & (validLibraryLength - 1)); i++) {
+                    for (let i = msgLength; i < msgLength + infos.libraryLength - (msgLength & (infos.libraryLength - 1)); i++) {
                         msgValue = msgValue.concat(pseudorandomCharacter.toString())
                     }
                 }
@@ -429,7 +429,7 @@ function validateAndGenerateInput(library, elementMsg, elementSeedSub, elementSa
             const view = new DataView(bytes.buffer)
 
             // Read as 8-bit Little-Endian
-            let index = view.getUint8(0, true)
+            let index = view.getUint8(0)
             charString = charString.concat(infos.library[index])
         }
 
@@ -440,18 +440,20 @@ function validateAndGenerateInput(library, elementMsg, elementSeedSub, elementSa
 // Method that encrypts/decrypts the message using the keys
 async function crypt(infos) {
     let tempValues = {
-        text: "",
+        partialTextBytes: undefined,
         library: infos.library.toString(),
         libraryLength: infos.libraryLength,
         seedSub: infos.seedSub.toString(),
         saltSub: infos.saltSub.toString(),
-        keySub: "",
+        keySub: undefined,
         seedTra: infos.seedTra.toString(),
         saltTra: infos.saltTra.toString(),
-        keyTra: ""
+        keyTra: undefined
     }
-    let partialMsg = ""
-    let partialCryptText = ""
+
+    let partialMsgString
+    let partialMsgBytes
+    let partialCryptBytes
     let cryptText = ""
 
     // Depending on the mode of encryption/decryption selected
@@ -464,18 +466,30 @@ async function crypt(infos) {
             // the message into smaller substrings
             for (let counter = 0; counter * infos.libraryLength < infos.msgLength; counter++) {
                 if (counter != 0) {
-                    tempValues.text = (infos.encode ? partialMsg.toString() : partialCryptText.toString())
-                    tempValues.keySub = infos.keySub.toString()
+                    tempValues.partialTextBytes = (infos.encode ? partialMsgBytes : partialCryptBytes)
+                    tempValues.keySub = infos.keySub
+
+                    // Split the input message into substrings of the length of the library
+                    partialMsgString = infos.msg.toString().substring(counter * infos.libraryLength,
+                        (counter + 1) * infos.libraryLength)
+                    // Transform the string into a byte array
+                    partialMsgBytes = stringToBytes(partialMsgString, infos)
                 }
 
-                infos.keySub = (await generateKeys(tempValues, true)).toString()
-
-                // Split the input message into substrings of the length of the library
-                partialMsg = infos.msg.toString().substring(counter * infos.libraryLength,
+                else {
+                    // Split the input message into substrings of the length of the library
+                    partialMsgString = infos.msg.toString().substring(counter * infos.libraryLength,
                         (counter + 1) * infos.libraryLength)
-                partialCryptText = substitute(infos, Array.from(partialMsg), counter)
+                    // Transform the string into a byte array
+                    partialMsgBytes = stringToBytes(partialMsgString, infos)
+                    tempValues.partialTextBytes = partialMsgBytes
+                }
+
+                infos.keySub = await generateKeys(tempValues, true)
+
+                partialCryptBytes = substitute(partialMsgBytes, infos, counter)
                 
-                cryptText = cryptText.concat(partialCryptText.toString())
+                cryptText = cryptText.concat(generateStringFromArray(partialCryptBytes, infos).toString())
             }
 
             infos.result = cryptText
@@ -486,22 +500,38 @@ async function crypt(infos) {
                 // The counter counts the number of blocks that make the message, and helps to split
                 // the message into smaller substrings
                 for (let counter = 0; counter * infos.libraryLength < infos.msgLength; counter++) {
+                    // Split the input message into substrings of the length of the library
+                    partialMsgString = infos.msg.toString().substring(counter * infos.libraryLength,
+                        (counter + 1) * infos.libraryLength)
+
                     if (counter != 0) {
-                        tempValues.text = partialMsg.toString()
-                        tempValues.keySub = infos.keySub.toString()
-                        tempValues.keyTra = infos.keyTra.toString()
+                        tempValues.partialTextBytes = partialMsgBytes
+                        tempValues.keySub = infos.keySub
+                        tempValues.keyTra = infos.keyTra
+
+                        // Split the input message into substrings of the length of the library
+                        partialMsgString = infos.msg.toString().substring(counter * infos.libraryLength,
+                            (counter + 1) * infos.libraryLength)
+                        // Transform the string into a byte array
+                        partialMsgBytes = stringToBytes(partialMsgString, infos)
+                    }
+                    
+                    else {
+                        // Split the input message into substrings of the length of the library
+                        partialMsgString = infos.msg.toString().substring(counter * infos.libraryLength,
+                            (counter + 1) * infos.libraryLength)
+                        // Transform the string into a byte array
+                        partialMsgBytes = stringToBytes(partialMsgString, infos)
+                        tempValues.partialTextBytes = partialMsgBytes
                     }
 
-                    infos.keySub = (await generateKeys(tempValues, true)).toString()
-                    infos.keyTra = (await generateKeys(tempValues, false)).toString()
+                    infos.keySub = await generateKeys(tempValues, true)
+                    infos.keyTra = await generateKeys(tempValues, false)
 
-                    // Split the input message into substrings of the length of the library
-                    partialMsg =  infos.msg.toString().substring(counter * infos.libraryLength,
-                        (counter + 1) * infos.libraryLength)
-                    partialCryptText = substitute(infos, Array.from(partialMsg), counter)
-                    partialCryptText = transpose(infos, Array.from(partialCryptText), counter)
+                    partialCryptBytes = substitute(partialMsgBytes, infos, counter)
+                    partialCryptBytes = transpose(partialCryptBytes, infos, counter)
 
-                    cryptText = cryptText.concat(partialCryptText.toString())
+                    cryptText = cryptText.concat(generateStringFromArray(partialCryptBytes, infos).toString())
                 }
             }
 
@@ -509,22 +539,38 @@ async function crypt(infos) {
                 // The counter counts the number of blocks that make the message, and helps to split
                 // the message into smaller substrings
                 for (let counter = 0; counter * infos.libraryLength < infos.msgLength; counter++) {
+                    // Split the input message into substrings of the length of the library
+                    partialMsgString = infos.msg.toString().substring(counter * infos.libraryLength,
+                        (counter + 1) * infos.libraryLength)
+
                     if (counter != 0) {
-                        tempValues.text = partialCryptText.toString()
-                        tempValues.keySub = infos.keySub.toString()
-                        tempValues.keyTra = infos.keyTra.toString()
+                        tempValues.partialTextBytes = partialCryptBytes
+                        tempValues.keySub = infos.keySub
+                        tempValues.keyTra = infos.keyTra
+
+                        // Split the input message into substrings of the length of the library
+                        partialMsgString = infos.msg.toString().substring(counter * infos.libraryLength,
+                            (counter + 1) * infos.libraryLength)
+                        // Transform the string into a byte array
+                        partialMsgBytes = stringToBytes(partialMsgString, infos)
+                    }
+                    
+                    else {
+                        // Split the input message into substrings of the length of the library
+                        partialMsgString = infos.msg.toString().substring(counter * infos.libraryLength,
+                            (counter + 1) * infos.libraryLength)
+                        // Transform the string into a byte array
+                        partialMsgBytes = stringToBytes(partialMsgString, infos)
+                        tempValues.partialTextBytes = partialMsgBytes
                     }
 
-                    infos.keySub = (await generateKeys(tempValues, true)).toString()
-                    infos.keyTra = (await generateKeys(tempValues, false)).toString()
+                    infos.keySub = await generateKeys(tempValues, true)
+                    infos.keyTra = await generateKeys(tempValues, false)
 
-                    // Split the input message into substrings of the length of the library
-                    partialMsg = infos.msg.toString().substring(counter * infos.libraryLength,
-                        (counter + 1) * infos.libraryLength)
-                    partialCryptText = transpose(infos, Array.from(partialMsg), counter)
-                    partialCryptText = substitute(infos, Array.from(partialCryptText), counter)
+                    partialCryptBytes = transpose(partialMsgBytes, infos, counter)
+                    partialCryptBytes = substitute(partialCryptBytes, infos, counter)
 
-                    cryptText = cryptText.concat(partialCryptText.toString())
+                    cryptText = cryptText.concat(generateStringFromArray(partialCryptBytes, infos).toString())
                 }
             }
 
@@ -536,19 +582,35 @@ async function crypt(infos) {
             // The counter counts the number of blocks that make the message, and helps to split
             // the message into smaller substrings
             for (let counter = 0; counter * infos.libraryLength < infos.msgLength; counter++) {
+                // Split the input message into substrings of the length of the library
+                partialMsgString = infos.msg.toString().substring(counter * infos.libraryLength,
+                        (counter + 1) * infos.libraryLength)
+
                 if (counter != 0) {
-                    tempValues.text = (infos.encode ? partialMsg.toString() : partialCryptText.toString())
-                    tempValues.keyTra = infos.keyTra.toString()
+                    tempValues.partialTextBytes = (infos.encode ? partialMsgBytes : partialCryptBytes)
+                    tempValues.keyTra = infos.keyTra
+
+                    // Split the input message into substrings of the length of the library
+                    partialMsgString = infos.msg.toString().substring(counter * infos.libraryLength,
+                        (counter + 1) * infos.libraryLength)
+                    // Transform the string into a byte array
+                    partialMsgBytes = stringToBytes(partialMsgString, infos)
                 }
 
-                infos.keyTra = (await generateKeys(tempValues, false)).toString()
-
-                // Split the input message into substrings of the length of the library
-                partialMsg = infos.msg.toString().substring(counter * infos.libraryLength,
+                else {
+                    // Split the input message into substrings of the length of the library
+                    partialMsgString = infos.msg.toString().substring(counter * infos.libraryLength,
                         (counter + 1) * infos.libraryLength)
-                partialCryptText = transpose(infos, Array.from(partialMsg), counter)
+                    // Transform the string into a byte array
+                    partialMsgBytes = stringToBytes(partialMsgString, infos)
+                    tempValues.partialTextBytes = partialMsgBytes
+                }
 
-                cryptText = cryptText.concat(partialCryptText.toString())
+                infos.keyTra = await generateKeys(tempValues, false)
+
+                partialCryptBytes = transpose(partialMsgBytes, infos, counter)
+
+                cryptText = cryptText.concat(generateStringFromArray(partialCryptBytes, infos).toString())
             }
 
             infos.result = cryptText
@@ -562,32 +624,27 @@ async function crypt(infos) {
 
 
     // Method that substitutes the characters and returns a string
-    function substitute(infos, partialMsg, counter) {
+    function substitute(partialMsgBytes, infos, counter) {
         // Define the sign accordingly to encoding vs decoding; substitution encoding is based on modular addition,
         // while substitution decoding is based on modular subtraction
         const sign = (infos.encode ? 1 : -1)
 
-        let initSymb
+        let msgBytesClone = Uint8Array.from(partialMsgBytes)
         let substitution
-        let finalSymb
 
         for (let i = 0; i < infos.libraryLength; i++) {
-            // Find actual symbol index value
-            initSymb = infos.library.indexOf(partialMsg[i].toString())
-            // Find transposition displacement value using key
-            substitution = infos.library.indexOf(infos.keySub[i].toString())
             // Compute (initial symbol index + displacement) mod infos.libraryLength
-            finalSymb = (initSymb + sign * substitution + infos.libraryLength) & (validLibraryLength - 1)
+            substitution = (msgBytesClone[i] + sign * infos.keySub[i] + infos.libraryLength) & (infos.libraryLength - 1)
 
             // Substitute the old symbol for the new one
-            partialMsg[i] = infos.library[finalSymb].toString()
+            msgBytesClone[i] = substitution
         }
 
-        return partialMsg.join("")
+        return msgBytesClone
     }
 
     // Method that transposes the characters and returns a string
-    function transpose(infos, partialMsg, counter) {
+    function transpose(partialMsgBytes, infos, counter) {
         // Define the start, end, and step values according to encoding vs decoding; transposition encoding
         // starts from the beginning of the string up to the end, while transposition decoding starts from
         // the end of the string down to the beginning
@@ -595,130 +652,159 @@ async function crypt(infos) {
         const end = (infos.encode ? infos.libraryLength : -1)
         const step = (infos.encode ? 1 : -1)
 
-        let initPos
+        let msgBytesClone = Uint8Array.from(partialMsgBytes)
         let transposition
-        let finalPos
 
-        for (initPos = start; initPos != end; initPos += step) {
-            // Find transposition displacement value using key
-            transposition = infos.library.indexOf(infos.keyTra[initPos].toString())
-            // Compute (initial position index + displacement) mod infos.libraryLength
-            finalPos = (initPos + transposition) & (validLibraryLength - 1); // Keep the semi-colon here to prevent bugs
+        for (let i = start; i != end; i += step) {
+            // Compute (initial symbol index + displacement) mod infos.libraryLength
+            transposition = (i + infos.keyTra[i]) & (infos.libraryLength - 1); // Keep the semi-colon here to prevent bugs
 
             // Swap the character's positions
-            [partialMsg[initPos], partialMsg[finalPos]] = [partialMsg[finalPos], partialMsg[initPos]]
+            [msgBytesClone[i], msgBytesClone[transposition]] = [msgBytesClone[transposition], msgBytesClone[i]]
         }
 
-        return partialMsg.join("")
+        return msgBytesClone
     }
 
     // Method that generates keys
     async function generateKeys(tempValues, substitutionBool) {
-        let msg = tempValues.text
-        let seed = ""
-        let salt = ""
-        let key = ""
+        let seedString
+        let saltString
+        let keyBytes
+        let array
+        let arrayKeyList = []
 
-        substitutionBool ? key = tempValues.keySub : key = tempValues.keyTra
+        substitutionBool ? keyBytes = tempValues.keySub : keyBytes = tempValues.keyTra
 
         // If a key has already been created
-        if (key !== "") {
-            const halvedLibraryLength = Math.floor(tempValues.libraryLength / 2)
-
+        if (keyBytes !== undefined) {
+            const fourthOfLibraryLength = tempValues.libraryLength / 4
+            let seedBuffer = new ArrayBuffer(fourthOfLibraryLength)
+            let seedBytes = new Uint8Array(seedBuffer)
+            let saltBuffer = new ArrayBuffer(fourthOfLibraryLength)
+            let saltBytes = new Uint8Array(saltBuffer)
+            
             // The purpose of the for loops if to mix the 4 substrings together before each autokey generation
             // The substrings are 64 characters long, so we mix one character from each substring with the other subtrings
             if (substitutionBool) {
-                for (let i = 0; i < 32; i++) {
-                    seed += key[i].toString() + msg[i + 64].toString() + key[i + 128].toString() + msg[i + 192].toString()
-                    salt += msg[i + 32].toString() + key[i + 96].toString() + msg[i + 160].toString() + key[i + 224].toString()
+                for (let i = 0; i < 4; i++) {
+                    for (let j = 0; j < 16; j++) {
+                        seedBytes[j * 4] = keyBytes[i * 16 + j]
+                        // tempValues.partialTextBytes from 64 to 127
+                        seedBytes[j * 4 + 1] = tempValues.partialTextBytes[i * 16 + j + 64]
+                        seedBytes[j * 4 + 2] = keyBytes[i * 16 + j + 128]
+                        // tempValues.partialTextBytes from 192 to 255
+                        seedBytes[j * 4 + 3] = tempValues.partialTextBytes[i * 16 + j + 192]
+
+                        // tempValues.partialTextBytes from 0 to 63
+                        saltBytes[j * 4] = tempValues.partialTextBytes[i * 16 + j]
+                        saltBytes[j * 4 + 1] = keyBytes[i * 16 + j + 64]
+                        // tempValues.partialTextBytes from 128 to 191
+                        saltBytes[j * 4 + 2] = tempValues.partialTextBytes[i * 16 + j + 128]
+                        saltBytes[j * 4 + 3] = keyBytes[i * 16 + j + 192]
+                    }
+
+                    array = await deriveSeededKey(seedBytes, saltBytes, tempValues)
+                    arrayKeyList.push(array)
                 }
             }
 
             else {
-                for (let i = 0; i < 32; i++) {
-                    seed += msg[255 - i - 32].toString() + key[255 - i - 96].toString() + msg[255 - i - 160].toString() +
-                        key[255 - i - 224].toString()
-                    salt += key[255 - i].toString() + msg[255 - i - 64].toString() + key[255 - i - 128].toString() +
-                        msg[255 - i - 192].toString()
+                for (let i = 0; i < 4; i++) {
+                    for (let j = 0; j < 16; j++) {
+                        // tempValues.partialTextByte from 255 to 192
+                        seedBytes[j * 4] = tempValues.partialTextBytes[255 - i * 16 - j]
+                        seedBytes[j * 4 + 1] = keyBytes[255 - i * 16 - j - 64]
+                        // tempValues.partialTextBytes from 127 to 64
+                        seedBytes[j * 4 + 2] = tempValues.partialTextBytes[255 - i * 16 - j - 128]
+                        seedBytes[j * 4 + 3] = keyBytes[255 - i * 16 - j - 192]
+
+                        saltBytes[j * 4] = keyBytes[255 - i * 16 - j]
+                        // tempValues.partialTextByte from 191 to 128
+                        saltBytes[j * 4 + 1] = tempValues.partialTextBytes[255 - i * 16 - j - 64]
+                        saltBytes[j * 4 + 2] = keyBytes[255 - i * 16 - j - 128]
+                        // tempValues.partialTextByte from 63 to 0
+                        saltBytes[j * 4 + 3] = tempValues.partialTextBytes[255 - i * 16 - j - 192]
+                    }
+
+                    array = await deriveSeededKey(seedBytes, saltBytes, tempValues)
+                    arrayKeyList.push(array)
                 }
             }
-
-            key = ""
         }
 
         // If no key has been created yet
         else {
-            substitutionBool ? seed = tempValues.seedSub : seed = tempValues.seedTra
-            substitutionBool ? salt = tempValues.saltSub : salt = tempValues.saltTra
+            substitutionBool ? seedString = tempValues.seedSub : seedString = tempValues.seedTra
+            substitutionBool ? saltString = tempValues.saltSub : saltString = tempValues.saltTra
+
+            let seedSubstring
+            let saltSubstring
+            let seedBytes
+            let saltBytes
+
+            for (let i = 0; i < 4; i++) {
+                seedSubstring = seedString.substring(i * 64, (i + 1) * 64)
+                saltSubstring = saltString.substring(i * 64, (i + 1) * 64)
+                
+                // Convert the key and salt strings into bytes
+                seedBytes = stringToBytes(seedSubstring, infos)
+                saltBytes = stringToBytes(saltSubstring, infos)
+
+                array = await deriveSeededKey(seedBytes, saltBytes, tempValues)
+                arrayKeyList.push(array)
+            }
         }
 
-        let arrayList = await deriveSeededKey(seed, salt, tempValues)
-        let array
+        const buffer = new ArrayBuffer(tempValues.partialTextBytes.length)
+        const view = new Uint8Array(buffer)
+        const fourthOfLibraryLength = tempValues.libraryLength / 4
 
-        for (let i = 0; i < 4; i++) {
-            array = arrayList[i]
-            key = key.concat(generateStringFromArray(array, tempValues, tempValues.libraryLength / 4).toString())
+        for (let i = 0; i < fourthOfLibraryLength; i++) {
+            view[i] = arrayKeyList[0][i]
+            view[i + fourthOfLibraryLength] = arrayKeyList[1][i]
+            view[i + 2 * fourthOfLibraryLength] = arrayKeyList[2][i]
+            view[i + 3 * fourthOfLibraryLength] = arrayKeyList[3][i]
         }
 
-        return key.toString()
+        return new Uint8Array(buffer)
     }
 
     // Method that convert an array to a string
-    function generateStringFromArray(array, infos, length) {
+    function generateStringFromArray(array, infos) {
         let charString = ""
 
-        for (let i = 0; i < length; i++) {
-            const bytes = new Uint8Array([array[i]])
-            const view = new DataView(bytes.buffer)
-
-            // Read as 8-bit Little-Endian
-            let index = view.getUint8(0, true)
-            charString = charString.concat(infos.library[index])
+        for (let i = 0; i < array.length; i++) {
+            charString = charString.concat(infos.library[array[i]])
         }
 
         return charString.toString()
     }
 
     // Method that generates the combined value of the key with the salt
-    async function deriveSeededKey(seedString, saltString, infos) {
-        let seedSubstring
-        let saltSubstring
-        let arrayList = []
+    async function deriveSeededKey(seedBytes, saltBytes, infos) {
+        // Import the seed into the Web Crypto API as base key material
+        const baseKey = await window.crypto.subtle.importKey(
+            "raw", 
+            seedBytes, 
+            "PBKDF2", 
+            false, 
+            ["deriveBits"]
+        )
 
-        for (let i = 0; i < 4; i++) {
-            seedSubstring = seedString.substring(i, (i + 1) * 64)
-            saltSubstring = saltString.substring(i, (i + 1) * 64)
-            
-            // Convert the key and salt strings into bytes
-            const seedBytes = stringToBytes(seedSubstring, infos)
-            const saltBytes = stringToBytes(saltSubstring, infos)
+        const derivedBits = await window.crypto.subtle.deriveBits(
+            {
+            name: "PBKDF2",
+            salt: saltBytes,
+            iterations: 220000,
+            hash: "SHA-512"
+            },
+            baseKey,
+            512 // The exact bit length requirement
+        )
 
-            // Import the seed into the Web Crypto API as base key material
-            const baseKey = await window.crypto.subtle.importKey(
-                "raw", 
-                seedBytes, 
-                "PBKDF2", 
-                false, 
-                ["deriveBits"]
-            )
-
-            const derivedBits = await window.crypto.subtle.deriveBits(
-                {
-                name: "PBKDF2",
-                salt: saltBytes,
-                iterations: 220000,
-                hash: "SHA-512"
-                },
-                baseKey,
-                512 // The exact bit length requirement
-            )
-
-            // Create an ArrayBuffer containing exactly 512 bits
-            let array = new Uint8Array(derivedBits)
-            arrayList.push(array)
-        }
-
-        return arrayList
+        // Create an ArrayBuffer containing exactly 512 bits
+        return new Uint8Array(derivedBits)
     }
 
     function stringToBytes(string, infos) {
@@ -729,7 +815,6 @@ async function crypt(infos) {
             view[i] = infos.library.indexOf(string[i].toString())
         }
   
-        // Return buffer as a Uint8Array
-        return new Uint8Array(buffer)
+        return view
     }
 }
