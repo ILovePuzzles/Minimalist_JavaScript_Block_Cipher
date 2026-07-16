@@ -465,7 +465,7 @@ async function crypt(infos) {
             // the message into smaller substrings
             for (let counter = 0; counter * infos.libraryLength < infos.msgLength; counter++) {
                 if (counter != 0) {
-                    tempValues.text = (infos.encode ? partialCryptText.toString() : partialMsg.toString())
+                    tempValues.text = (infos.encode ? partialMsg.toString() : partialCryptText.toString())
                     tempValues.keySub = infos.keySub.toString()
                 }
 
@@ -488,7 +488,7 @@ async function crypt(infos) {
                 // the message into smaller substrings
                 for (let counter = 0; counter * infos.libraryLength < infos.msgLength; counter++) {
                     if (counter != 0) {
-                        tempValues.text = partialCryptText.toString()
+                        tempValues.text = partialMsg.toString()
                         tempValues.keySub = infos.keySub.toString()
                         tempValues.keyTra = infos.keyTra.toString()
                     }
@@ -511,7 +511,7 @@ async function crypt(infos) {
                 // the message into smaller substrings
                 for (let counter = 0; counter * infos.libraryLength < infos.msgLength; counter++) {
                     if (counter != 0) {
-                        tempValues.text = partialMsg.toString()
+                        tempValues.text = partialCryptText.toString()
                         tempValues.keySub = infos.keySub.toString()
                         tempValues.keyTra = infos.keyTra.toString()
                     }
@@ -538,7 +538,7 @@ async function crypt(infos) {
             // the message into smaller substrings
             for (let counter = 0; counter * infos.libraryLength < infos.msgLength; counter++) {
                 if (counter != 0) {
-                    tempValues.text = (infos.encode ? partialCryptText.toString() : partialMsg.toString())
+                    tempValues.text = (infos.encode ? partialMsg.toString() : partialCryptText.toString())
                     tempValues.keyTra = infos.keyTra.toString()
                 }
 
@@ -618,7 +618,7 @@ async function crypt(infos) {
         let msg = tempValues.text
         let seed = ""
         let salt = ""
-        let key
+        let key = ""
 
         substitutionBool ? key = tempValues.keySub : key = tempValues.keyTra
 
