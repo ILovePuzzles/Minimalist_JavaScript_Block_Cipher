@@ -500,10 +500,6 @@ async function crypt(infos) {
                 // The counter counts the number of blocks that make the message, and helps to split
                 // the message into smaller substrings
                 for (let counter = 0; counter * infos.libraryLength < infos.msgLength; counter++) {
-                    // Split the input message into substrings of the length of the library
-                    partialMsgString = infos.msg.toString().substring(counter * infos.libraryLength,
-                        (counter + 1) * infos.libraryLength)
-
                     if (counter != 0) {
                         tempValues.partialTextBytes = partialMsgBytes
                         tempValues.keySub = infos.keySub
@@ -539,10 +535,6 @@ async function crypt(infos) {
                 // The counter counts the number of blocks that make the message, and helps to split
                 // the message into smaller substrings
                 for (let counter = 0; counter * infos.libraryLength < infos.msgLength; counter++) {
-                    // Split the input message into substrings of the length of the library
-                    partialMsgString = infos.msg.toString().substring(counter * infos.libraryLength,
-                        (counter + 1) * infos.libraryLength)
-
                     if (counter != 0) {
                         tempValues.partialTextBytes = partialCryptBytes
                         tempValues.keySub = infos.keySub
@@ -582,10 +574,6 @@ async function crypt(infos) {
             // The counter counts the number of blocks that make the message, and helps to split
             // the message into smaller substrings
             for (let counter = 0; counter * infos.libraryLength < infos.msgLength; counter++) {
-                // Split the input message into substrings of the length of the library
-                partialMsgString = infos.msg.toString().substring(counter * infos.libraryLength,
-                        (counter + 1) * infos.libraryLength)
-
                 if (counter != 0) {
                     tempValues.partialTextBytes = (infos.encode ? partialMsgBytes : partialCryptBytes)
                     tempValues.keyTra = infos.keyTra
@@ -656,7 +644,7 @@ async function crypt(infos) {
         let transposition
 
         for (let i = start; i != end; i += step) {
-            // Compute (initial symbol index + displacement) mod infos.libraryLength
+            // Compute (initial position index + displacement) mod infos.libraryLength
             transposition = (i + infos.keyTra[i]) & (infos.libraryLength - 1); // Keep the semi-colon here to prevent bugs
 
             // Swap the character's positions
