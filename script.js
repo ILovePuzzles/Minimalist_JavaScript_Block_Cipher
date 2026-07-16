@@ -9,6 +9,8 @@ const elementMode = document.getElementById("mode")
 // has been replaced with the logical and operator. This change will not work, with
 // values other than a power of 2
 const validLibraryLength = 256
+const seedSize = 256
+const saltSize = 256
 
 // Upon loading the page load the default library
 elementLibrary.value = defaultLibrary
@@ -356,9 +358,6 @@ function validateAndGenerateInput(library, elementMsg, elementSeedSub, elementSa
         // If the key and salt are made of characters from the library
         else if (validateCharacterContent(seed, seedLength, infos.library) &&
         validateCharacterContent(salt, saltLength, infos.library)) {
-            let seedSize = 256
-            let saltSize = 128
-
             // If the seed string is too short
             if (seedLength < seedSize) {
                 seed = seed.concat(generateStringFromArray(generateSymmetricKeyOrSalt(seedSize), infos, seedSize).toString().substring(0,
@@ -688,7 +687,7 @@ async function crypt(infos) {
 
         for (let i = 0; i < 4; i++) {
             seedSubstring = seedString.substring(i, (i + 1) * 64)
-            saltSubstring = saltString.substring(i, (i + 1) * 32)
+            saltSubstring = saltString.substring(i, (i + 1) * 64)
             
             // Convert the key and salt strings into bytes
             const seedBytes = stringToBytes(seedSubstring, infos)
@@ -703,7 +702,6 @@ async function crypt(infos) {
                 ["deriveBits"]
             )
 
-            // Stretch the seed into exactly 4096 bits using PBKDF2
             const derivedBits = await window.crypto.subtle.deriveBits(
                 {
                 name: "PBKDF2",
