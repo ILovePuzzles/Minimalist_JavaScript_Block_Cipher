@@ -42,10 +42,11 @@
                     <p>The library must contain UTF-16 characters only. It must be made from 256 characters, and each character<br>
                         cannot appear more than once;<br>
                         The message and the two keys can only contain characters from the library;<br>
-                        The message cannot be empty, however the keys and salt can be generated automatically;<br>
-                        The seeds and salt must be 256 characters long. If the seeds and salt are longer, they will be truncated;<br>
+                        The message cannot be empty and cannot be more than 65536 characters long;
                         If your message is not a multiple of the length of the library, then an additionnal character will be <br>
-                        added at the end to complete the message.</p>
+                        added repeatedly at the end to complete the message;
+                        The seeds and salt must be 256 characters long. If the seeds and salt are longer, they will be truncated;<br>
+                        If the seeds and salt are empty or too short, they will be completed automatically.</p>
                         <br>
                 </div>
 
@@ -93,7 +94,7 @@
                 <div>
                     <!-- Add the class field, the class fs-inherit, and the class field-sizing-content. x-small screen col width = 12/12,
                     small screen col width = 8/12, medium screen col width = 6/12, large screen col width = 4/12 -->
-                    <textarea id="input" class="field fs-inherit field-sizing-content col-12 col-sm-8 col-md-6 col-lg-4"></textarea>
+                    <textarea id="input" class="field fs-inherit field-sizing-content col-12 col-sm-8 col-md-6 col-lg-4" maxlength="65536"></textarea>
                     <p id="inputP"></p>
                 </div>
 
@@ -103,7 +104,7 @@
                 <div>
                     <!-- Add the class fs-inherit, and the class field-sizing-content. x-small screen col width = 12/12,
                     small screen col width = 8/12, medium screen col width = 6/12, large screen col width = 4/12 -->
-                    <textarea id="library" class="fs-inherit field-sizing-content col-12 col-sm-8 col-md-6 col-lg-4" type="text"></textarea>
+                    <textarea id="library" class="fs-inherit field-sizing-content col-12 col-sm-8 col-md-6 col-lg-4" maxlength="256" type="text"></textarea>
                     <p id="libraryP"></p>
                 </div>
 
@@ -113,7 +114,7 @@
                 <div>
                     <!-- Add the class field, the class fs-inherit, and the class field-sizing-content. x-small screen col width = 12/12,
                     small screen col width = 8/12, medium screen col width = 6/12, large screen col width = 4/12 -->
-                    <textarea id="seedSub" class="field fs-inherit field-sizing-content col-12 col-sm-8 col-md-6 col-lg-4"></textarea>
+                    <textarea id="seedSub" class="field fs-inherit field-sizing-content col-12 col-sm-8 col-md-6 col-lg-4" maxlength="256"></textarea>
                     <p id="seedSubP"></p>
                 </div>
 
@@ -123,7 +124,7 @@
                 <div>
                     <!-- Add the class field, the class fs-inherit, and the class field-sizing-content. x-small screen col width = 12/12,
                     small screen col width = 8/12, medium screen col width = 6/12, large screen col width = 4/12 -->
-                    <textarea id="saltSub" class="field fs-inherit field-sizing-content col-12 col-sm-8 col-md-6 col-lg-4"></textarea>
+                    <textarea id="saltSub" class="field fs-inherit field-sizing-content col-12 col-sm-8 col-md-6 col-lg-4" maxlength="256"></textarea>
                     <p id="saltSubP"></p>
                 </div>
 
@@ -133,7 +134,7 @@
                 <div>
                     <!-- Add the class field, the class fs-inherit, and the class field-sizing-content. x-small screen col width = 12/12,
                     small screen col width = 8/12, medium screen col width = 6/12, large screen col width = 4/12 -->
-                    <textarea id="seedTra" class="field fs-inherit field-sizing-content col-12 col-sm-8 col-md-6 col-lg-4"></textarea>
+                    <textarea id="seedTra" class="field fs-inherit field-sizing-content col-12 col-sm-8 col-md-6 col-lg-4" maxlength="256"></textarea>
                     <p id="seedTraP"></p>
                 </div>
 
@@ -143,7 +144,7 @@
                 <div>
                     <!-- Add the class field, the class fs-inherit, and the class field-sizing-content. x-small screen col width = 12/12,
                     small screen col width = 8/12, medium screen col width = 6/12, large screen col width = 4/12 -->
-                    <textarea id="saltTra" class="field fs-inherit field-sizing-content col-12 col-sm-8 col-md-6 col-lg-4"></textarea>
+                    <textarea id="saltTra" class="field fs-inherit field-sizing-content col-12 col-sm-8 col-md-6 col-lg-4" maxlength="256"></textarea>
                     <p id="saltTraP"></p>
                 </div>
                 
