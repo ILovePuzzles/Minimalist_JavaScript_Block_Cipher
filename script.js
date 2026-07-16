@@ -689,18 +689,22 @@ async function crypt(infos) {
             if (substitutionBool) {
                 for (let i = 0; i < 4; i++) {
                     for (let j = 0; j < 16; j++) {
+                        // tempValues.partialTextByte from 0 to 63
                         seedBytes[j * 4] = keyBytes[i * 16 + j]
                         // tempValues.partialTextBytes from 64 to 127
                         seedBytes[j * 4 + 1] = tempValues.partialTextBytes[i * 16 + j + 64]
+                        // tempValues.partialTextByte from 128 to 191
                         seedBytes[j * 4 + 2] = keyBytes[i * 16 + j + 128]
                         // tempValues.partialTextBytes from 192 to 255
                         seedBytes[j * 4 + 3] = tempValues.partialTextBytes[i * 16 + j + 192]
 
                         // tempValues.partialTextBytes from 0 to 63
                         saltBytes[j * 4] = tempValues.partialTextBytes[i * 16 + j]
+                        // tempValues.partialTextByte from 64 to 127
                         saltBytes[j * 4 + 1] = keyBytes[i * 16 + j + 64]
                         // tempValues.partialTextBytes from 128 to 191
                         saltBytes[j * 4 + 2] = tempValues.partialTextBytes[i * 16 + j + 128]
+                        // tempValues.partialTextByte from 192 to 255
                         saltBytes[j * 4 + 3] = keyBytes[i * 16 + j + 192]
                     }
 
@@ -712,19 +716,23 @@ async function crypt(infos) {
             else {
                 for (let i = 0; i < 4; i++) {
                     for (let j = 0; j < 16; j++) {
-                        // tempValues.partialTextByte from 255 to 192
-                        seedBytes[j * 4] = tempValues.partialTextBytes[255 - i * 16 - j]
-                        seedBytes[j * 4 + 1] = keyBytes[255 - i * 16 - j - 64]
-                        // tempValues.partialTextBytes from 127 to 64
-                        seedBytes[j * 4 + 2] = tempValues.partialTextBytes[255 - i * 16 - j - 128]
-                        seedBytes[j * 4 + 3] = keyBytes[255 - i * 16 - j - 192]
-
-                        saltBytes[j * 4] = keyBytes[255 - i * 16 - j]
                         // tempValues.partialTextByte from 191 to 128
-                        saltBytes[j * 4 + 1] = tempValues.partialTextBytes[255 - i * 16 - j - 64]
-                        saltBytes[j * 4 + 2] = keyBytes[255 - i * 16 - j - 128]
+                        seedBytes[j * 4] = tempValues.partialTextBytes[255 - i * 16 - j - 64]
+                        // tempValues.partialTextByte from 127 to 64
+                        seedBytes[j * 4 + 1] = keyBytes[255 - i * 16 - j - 128]
+                        // tempValues.partialTextBytes from 63 to 0
+                        seedBytes[j * 4 + 2] = tempValues.partialTextBytes[255 - i * 16 - j - 192]
+                        // tempValues.partialTextByte from 255 to 192
+                        seedBytes[j * 4 + 3] = keyBytes[255 - i * 16 - j]
+
+                        // tempValues.partialTextByte from 191 to 128
+                        saltBytes[j * 4] = keyBytes[255 - i * 16 - j - 64]
+                        // tempValues.partialTextByte from 255 to 192
+                        saltBytes[j * 4 + 1] = tempValues.partialTextBytes[255 - i * 16 - j]
                         // tempValues.partialTextByte from 63 to 0
-                        saltBytes[j * 4 + 3] = tempValues.partialTextBytes[255 - i * 16 - j - 192]
+                        saltBytes[j * 4 + 2] = keyBytes[255 - i * 16 - j - 192]
+                        // tempValues.partialTextByte from 127 to 64
+                        saltBytes[j * 4 + 3] = tempValues.partialTextBytes[255 - i * 16 - j - 128]
                     }
 
                     array = await deriveSeededKey(seedBytes, saltBytes, tempValues)
